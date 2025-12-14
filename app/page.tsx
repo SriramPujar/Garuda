@@ -279,8 +279,8 @@ export default function Chat() {
                     <div style={{ width: '40px', display: 'block' }} className="mobile-spacer"></div>
 
                     <div style={{ textAlign: 'center', flexGrow: 1 }}>
-                        <h1 className={styles.title}>Garuda v3</h1>
-                        <p className={styles.subtitle}>Sidebar Active • Wisdom from the Scriptures</p>
+                        <h1 className={styles.title}>Garuda</h1>
+                        <p className={styles.subtitle}>Wisdom from the Eternal Scriptures</p>
                     </div>
 
                     <button onClick={toggleTheme} className={styles.sendButton} style={{ width: '36px', height: '36px', background: 'transparent', border: '1px solid var(--color-saffron-500)' }} title="Toggle Theme" suppressHydrationWarning>
