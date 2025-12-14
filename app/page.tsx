@@ -10,49 +10,152 @@ interface Message {
     content: string;
 }
 
+interface Session {
+    id: string;
+    title: string;
+    timestamp: number;
+    messages: Message[];
+}
+
 export default function Chat() {
+    const [sessions, setSessions] = useState<Session[]>([]);
+    const [currentSessionId, setCurrentSessionId] = useState<string | null>(null);
     const [messages, setMessages] = useState<Message[]>([]);
+
     const [input, setInput] = useState('');
     const [isLoading, setIsLoading] = useState(false);
     const [theme, setTheme] = useState<'dharma' | 'forest'>('dharma');
+    const [isSidebarOpen, setIsSidebarOpen] = useState(false);
+
     const messagesEndRef = useRef<HTMLDivElement>(null);
 
     const scrollToBottom = () => {
         messagesEndRef.current?.scrollIntoView({ behavior: 'smooth' });
     };
 
-    // Load persistence & theme
+    // Initialize: Load Theme & Sessions
     useEffect(() => {
-        const savedMsg = localStorage.getItem('garuda-chat-history');
-        if (savedMsg) {
-            try { setMessages(JSON.parse(savedMsg)); } catch (e) { }
-        }
+        // Theme
         const savedTheme = localStorage.getItem('garuda-theme') as 'dharma' | 'forest';
         if (savedTheme) setTheme(savedTheme);
+
+        // Sessions
+        const savedSessions = localStorage.getItem('garuda-sessions');
+        if (savedSessions) {
+            try {
+                const parsed = JSON.parse(savedSessions);
+                setSessions(parsed);
+                // Load most recent session if exists
+                if (parsed.length > 0) {
+                    const mostRecent = parsed[0];
+                    setCurrentSessionId(mostRecent.id);
+                    setMessages(mostRecent.messages);
+                }
+            } catch (e) {
+                console.error("Failed to load sessions", e);
+            }
+        } else {
+            // Migration: Check for old single-session history
+            const oldHistory = localStorage.getItem('garuda-chat-history');
+            if (oldHistory) {
+                try {
+                    const oldMessages = JSON.parse(oldHistory);
+                    if (oldMessages.length > 0) {
+                        const newSession: Session = {
+                            id: Date.now().toString(),
+                            title: 'Previous Chat',
+                            timestamp: Date.now(),
+                            messages: oldMessages
+                        };
+                        setSessions([newSession]);
+                        setCurrentSessionId(newSession.id);
+                        setMessages(oldMessages);
+                        localStorage.setItem('garuda-sessions', JSON.stringify([newSession]));
+                        localStorage.removeItem('garuda-chat-history'); // Cleanup
+                    }
+                } catch (e) { }
+            }
+        }
     }, []);
 
-    // Save persistence & theme
-    useEffect(() => {
-        if (messages.length > 0) {
-            localStorage.setItem('garuda-chat-history', JSON.stringify(messages));
-        }
-        scrollToBottom();
-    }, [messages]);
-
+    // Effect: Sync Theme changes
     useEffect(() => {
         localStorage.setItem('garuda-theme', theme);
         document.body.setAttribute('data-theme', theme);
     }, [theme]);
 
+    // Effect: Save Sessions whenever they change
+    useEffect(() => {
+        if (sessions.length > 0) {
+            localStorage.setItem('garuda-sessions', JSON.stringify(sessions));
+        }
+    }, [sessions]);
+
+    // Effect: Scroll on message update
+    useEffect(() => {
+        scrollToBottom();
+    }, [messages]);
+
     const toggleTheme = () => {
         setTheme(prev => prev === 'dharma' ? 'forest' : 'dharma');
     };
 
+    const toggleSidebar = () => {
+        setIsSidebarOpen(!isSidebarOpen);
+    };
+
+    const startNewChat = () => {
+        setCurrentSessionId(null);
+        setMessages([]);
+        setIsSidebarOpen(false); // Close sidebar on mobile on selection
+    };
+
+    const selectSession = (sessionId: string) => {
+        const session = sessions.find(s => s.id === sessionId);
+        if (session) {
+            setCurrentSessionId(session.id);
+            setMessages(session.messages);
+            setIsSidebarOpen(false);
+        }
+    };
+
+    const updateCurrentSession = (updatedMessages: Message[]) => {
+        setSessions(prev => {
+            let newSessions = [...prev];
+
+            if (currentSessionId) {
+                // Update existing
+                const index = newSessions.findIndex(s => s.id === currentSessionId);
+                if (index !== -1) {
+                    newSessions[index] = { ...newSessions[index], messages: updatedMessages };
+                    // Move to top
+                    const moved = newSessions.splice(index, 1)[0];
+                    newSessions.unshift(moved);
+                }
+            } else {
+                // Create new session
+                // Generate title from first message
+                const firstUserMsg = updatedMessages.find(m => m.role === 'user');
+                const title = firstUserMsg ? firstUserMsg.content.slice(0, 30) + (firstUserMsg.content.length > 30 ? '...' : '') : 'New Chat';
+
+                const newId = Date.now().toString();
+                const newSession: Session = {
+                    id: newId,
+                    title: title,
+                    timestamp: Date.now(),
+                    messages: updatedMessages
+                };
+                newSessions.unshift(newSession);
+                setCurrentSessionId(newId);
+            }
+            return newSessions;
+        });
+    };
+
     const speak = (text: string) => {
         if ('speechSynthesis' in window) {
-            window.speechSynthesis.cancel(); // Stop previous
-            const utterance = new SpeechSynthesisUtterance(text.replace(/[*#]/g, '')); // Strip markdown
-            // Try to find a good voice usually Indian English if available, or just default
+            window.speechSynthesis.cancel();
+            const utterance = new SpeechSynthesisUtterance(text.replace(/[*#]/g, ''));
             const voices = window.speechSynthesis.getVoices();
             const indianVoice = voices.find(v => v.lang.includes('IN') || v.name.includes('India'));
             if (indianVoice) utterance.voice = indianVoice;
@@ -73,7 +176,10 @@ export default function Chat() {
             content: input,
         };
 
-        setMessages((prev) => [...prev, userMessage]);
+        const newMessages = [...messages, userMessage];
+        setMessages(newMessages);
+        updateCurrentSession(newMessages); // Save to session immediately
+
         setInput('');
         setIsLoading(true);
 
@@ -82,7 +188,7 @@ export default function Chat() {
                 method: 'POST',
                 headers: { 'Content-Type': 'application/json' },
                 body: JSON.stringify({
-                    messages: [...messages, userMessage],
+                    messages: newMessages,
                 }),
             });
 
@@ -93,10 +199,11 @@ export default function Chat() {
             const decoder = new TextDecoder();
 
             const aiMessageId = (Date.now() + 1).toString();
-            setMessages((prev) => [
-                ...prev,
-                { id: aiMessageId, role: 'assistant', content: '' },
-            ]);
+            // Temporary placeholder for AI message
+            const initialAiMessage: Message = { id: aiMessageId, role: 'assistant', content: '' };
+
+            const messagesWithAi = [...newMessages, initialAiMessage];
+            setMessages(messagesWithAi);
 
             let done = false;
             let accumuluatedContent = '';
@@ -109,22 +216,27 @@ export default function Chat() {
                     const chunk = decoder.decode(value, { stream: true });
                     accumuluatedContent += chunk;
 
-                    setMessages((prev) =>
-                        prev.map((m) =>
-                            m.id === aiMessageId
-                                ? { ...m, content: accumuluatedContent }
-                                : m
-                        )
+                    const updatedMessagesWithStreaming = messagesWithAi.map(m =>
+                        m.id === aiMessageId ? { ...m, content: accumuluatedContent } : m
                     );
+                    setMessages(updatedMessagesWithStreaming);
+                    // Note: We typically don't update session storage on every chunk to save performance,
+                    // but we should update it at the end.
                 }
             }
 
+            // Final update to session with complete message
+            const finalMessages = messagesWithAi.map(m =>
+                m.id === aiMessageId ? { ...m, content: accumuluatedContent } : m
+            );
+            updateCurrentSession(finalMessages);
+
         } catch (error) {
             console.error('Error fetching chat:', error);
-            setMessages((prev) => [
-                ...prev,
-                { id: (Date.now() + 2).toString(), role: 'assistant', content: 'Sorry, I encountered an error connecting to the spiritual realm.' },
-            ]);
+            const errorMsg: Message = { id: (Date.now() + 2).toString(), role: 'assistant', content: 'Sorry, I encountered an error connecting to the spiritual realm.' };
+            const finalWithErr = [...newMessages, errorMsg];
+            setMessages(finalWithErr);
+            updateCurrentSession(finalWithErr);
         } finally {
             setIsLoading(false);
         }
@@ -132,16 +244,48 @@ export default function Chat() {
 
     return (
         <div className={styles.container}>
+            {/* Sidebar Toggle (Mobile) */}
+            <button className="sidebar-toggle" onClick={toggleSidebar}>
+                <span style={{ fontSize: '1.2rem' }}>☰</span>
+            </button>
+
+            {/* Overlay */}
+            <div className={`sidebar-overlay ${isSidebarOpen ? 'open' : ''}`} onClick={() => setIsSidebarOpen(false)} />
+
+            {/* Sidebar */}
+            <div className={`sidebar ${isSidebarOpen ? 'open' : ''}`}>
+                <button className="new-chat-btn" onClick={startNewChat}>
+                    <span>+</span> New Chat
+                </button>
+
+                <div className="session-list">
+                    {sessions.map(session => (
+                        <div
+                            key={session.id}
+                            className={`session-item ${currentSessionId === session.id ? 'active' : ''}`}
+                            onClick={() => selectSession(session.id)}
+                        >
+                            <div className="session-title">{session.title}</div>
+                            <div className="session-date">{new Date(session.timestamp).toLocaleDateString()}</div>
+                        </div>
+                    ))}
+                </div>
+            </div>
+
+            {/* Main Content */}
             <header className={styles.header}>
                 <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', width: '100%' }}>
-                    <button onClick={toggleTheme} className={styles.sendButton} style={{ width: '36px', height: '36px', background: 'transparent', border: '1px solid var(--color-saffron-500)' }} title="Toggle Theme" suppressHydrationWarning>
-                        {theme === 'dharma' ? '🌙' : '🌿'}
-                    </button>
+                    {/* Space for sidebar toggle on mobile */}
+                    <div style={{ width: '40px', display: 'block' }} className="mobile-spacer"></div>
+
                     <div style={{ textAlign: 'center', flexGrow: 1 }}>
                         <h1 className={styles.title}>Garuda</h1>
                         <p className={styles.subtitle}>Wisdom from the Eternal Scriptures</p>
                     </div>
-                    <div style={{ width: '36px' }}></div> {/* Spacer */}
+
+                    <button onClick={toggleTheme} className={styles.sendButton} style={{ width: '36px', height: '36px', background: 'transparent', border: '1px solid var(--color-saffron-500)' }} title="Toggle Theme" suppressHydrationWarning>
+                        {theme === 'dharma' ? '🌙' : '🌿'}
+                    </button>
                 </div>
             </header>
 
