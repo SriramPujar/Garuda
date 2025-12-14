@@ -279,7 +279,7 @@ export default function Chat() {
                     <div style={{ width: '40px', display: 'block' }} className="mobile-spacer"></div>
 
                     <div style={{ textAlign: 'center', flexGrow: 1 }}>
-                        <h1 className={styles.title}>Garuda</h1>
+                        <h1 className={styles.title}>Garuda v2</h1>
                         <p className={styles.subtitle}>Wisdom from the Eternal Scriptures</p>
                     </div>
 
