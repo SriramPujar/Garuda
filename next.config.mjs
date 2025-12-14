@@ -8,7 +8,7 @@ const nextConfig = {
 
 export default withPWA({
     dest: "public",
-    disable: process.env.NODE_ENV === "development",
+    disable: true, // TEMPORARY: Force disable to clear client cache
     register: true,
     skipWaiting: true,
 })(nextConfig);
