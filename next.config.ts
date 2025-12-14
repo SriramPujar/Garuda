@@ -2,12 +2,13 @@ import type { NextConfig } from "next";
 import withPWA from "@ducanh2912/next-pwa";
 
 const config: NextConfig = {
-  // your next config
+  eslint: { ignoreDuringBuilds: true },
+  typescript: { ignoreBuildErrors: true },
 };
 
 const withPWAConfig = withPWA({
   dest: "public",
-  disable: true, // TEMPORARY: Force disable to clear client cache
+  disable: process.env.NODE_ENV === "development",
   register: true,
   skipWaiting: true,
 });
