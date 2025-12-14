@@ -1,0 +1,101 @@
+:root {
+  /* Default Spiritual Palette (Dharma) */
+  --color-saffron-50: #fff5e6;
+  --color-saffron-100: #ffeccc;
+  --color-saffron-500: #ff9933;
+  /* Classic Saffron */
+  --color-saffron-700: #cc6600;
+
+  --color-gold-500: #ffd700;
+  --color-gold-600: #d4af37;
+  /* Metallic Gold */
+
+  --color-deep-blue-900: #0f172a;
+  /* Midnight Blue */
+  --color-deep-blue-950: #020617;
+
+  --color-text-primary: #f8fafc;
+  --color-text-secondary: #cbd5e1;
+
+  --bg-primary: var(--color-deep-blue-950);
+  --bg-secondary: var(--color-deep-blue-900);
+  --bg-msg-user: rgba(255, 153, 51, 0.1);
+  --bg-msg-ai: rgba(15, 23, 42, 0.6);
+
+  --gradient-header: linear-gradient(to bottom, rgba(2, 6, 23, 0.9), transparent);
+  --gradient-bg: radial-gradient(circle at 50% 0%, rgba(255, 153, 51, 0.15), transparent 70%),
+    radial-gradient(circle at 100% 100%, rgba(212, 175, 55, 0.1), transparent 50%);
+
+  --font-sans: 'Outfit', sans-serif;
+  --font-serif: 'Cinzel', serif;
+}
+
+[data-theme='forest'] {
+  /* Vana (Forest) Palette - Earthy & Silver */
+  --color-saffron-500: #4ade80;
+  /* Green accent */
+  --color-saffron-700: #16a34a;
+
+  --color-gold-500: #e2e8f0;
+  /* Silver */
+  --color-gold-600: #94a3b8;
+
+  --color-deep-blue-900: #1c1917;
+  /* Warm Dark Grey */
+  --color-deep-blue-950: #0c0a09;
+
+  --bg-primary: #0c0a09;
+  --bg-secondary: #1c1917;
+  --bg-msg-user: rgba(74, 222, 128, 0.1);
+  --bg-msg-ai: rgba(28, 25, 23, 0.6);
+
+  --gradient-bg: radial-gradient(circle at 50% 0%, rgba(74, 222, 128, 0.1), transparent 70%),
+    radial-gradient(circle at 0% 100%, rgba(226, 232, 240, 0.1), transparent 50%);
+}
+
+* {
+  box-sizing: border-box;
+  padding: 0;
+  margin: 0;
+}
+
+body {
+  background-color: var(--bg-primary);
+  color: var(--color-text-primary);
+  font-family: var(--font-sans);
+  min-height: 100vh;
+  overflow-x: hidden;
+  background-image: var(--gradient-bg);
+  transition: background-color 0.5s ease, color 0.5s ease;
+}
+
+h1,
+h2,
+h3,
+h4,
+h5,
+h6 {
+  font-family: var(--font-serif);
+  color: var(--color-saffron-500);
+  letter-spacing: 0.05em;
+  transition: color 0.5s ease;
+}
+
+/* ... Rest of existing styles implicitly supported via vars ... */
+
+::-webkit-scrollbar {
+  width: 8px;
+}
+
+::-webkit-scrollbar-track {
+  background: var(--bg-primary);
+}
+
+::-webkit-scrollbar-thumb {
+  background: var(--color-saffron-700);
+  border-radius: 4px;
+}
+
+::-webkit-scrollbar-thumb:hover {
+  background: var(--color-saffron-500);
+}
