@@ -1,8 +1,21 @@
 'use client';
 
 import { useEffect, useRef, useState } from 'react';
+import { useSession, signOut } from 'next-auth/react';
 import styles from './page.module.css';
 import DailyQuote from './components/DailyQuote';
+import LoginModal from './components/LoginModal';
+import { Capacitor } from '@capacitor/core';
+
+// Map raw PDF filenames → beautiful display names
+function prettifySource(filename: string): string {
+    const lower = filename.toLowerCase();
+    if (lower.includes('bhagavad') || lower.includes('gita-as-it-is') || lower.includes('gita_as_it_is') || lower.includes('bhagavad_gita')) return 'Bhagavad Gita';
+    if (lower.includes('uddhava')) return 'Uddhava Gita';
+    if (lower.includes('bhagavata') || lower.includes('bhagavatam') || lower.includes('bhagavata-mahapurana')) return 'Śrīmad Bhāgavatam';
+    return filename.replace(/[-_]/g, ' ').replace(/\.pdf$/i, '');
+}
+
 
 interface Message {
     id: string;
@@ -17,15 +30,27 @@ interface Session {
     messages: Message[];
 }
 
+// Book filter definitions
+const BOOKS = [
+    { id: 'all',        label: 'All Scriptures',  icon: '🕉️' },
+    { id: 'bg',         label: 'Bhagavad Gita',    icon: '📖' },
+    { id: 'uddhava',    label: 'Uddhava Gita',     icon: '🌺' },
+    { id: 'bhagavatam', label: 'Bhāgavatam',       icon: '🪷' },
+];
+
 export default function Chat() {
+    const { data: session, status } = useSession();
     const [sessions, setSessions] = useState<Session[]>([]);
     const [currentSessionId, setCurrentSessionId] = useState<string | null>(null);
     const [messages, setMessages] = useState<Message[]>([]);
+    const [isInitialized, setIsInitialized] = useState(false);
+    const [deferredPrompt, setDeferredPrompt] = useState<any>(null);
 
     const [input, setInput] = useState('');
     const [isLoading, setIsLoading] = useState(false);
     const [theme, setTheme] = useState<'dharma' | 'forest'>('dharma');
     const [isSidebarOpen, setIsSidebarOpen] = useState(false);
+    const [activeFilter, setActiveFilter] = useState('all');
 
     const messagesEndRef = useRef<HTMLDivElement>(null);
 
@@ -33,48 +58,53 @@ export default function Chat() {
         messagesEndRef.current?.scrollIntoView({ behavior: 'smooth' });
     };
 
-    // Initialize: Load Theme & Sessions
+    // Initialize: Load Theme & Sessions from API
     useEffect(() => {
         // Theme
         const savedTheme = localStorage.getItem('garuda-theme') as 'dharma' | 'forest';
         if (savedTheme) setTheme(savedTheme);
 
-        // Sessions
-        const savedSessions = localStorage.getItem('garuda-sessions');
-        if (savedSessions) {
-            try {
-                const parsed = JSON.parse(savedSessions);
-                setSessions(parsed);
-                // Load most recent session if exists
-                if (parsed.length > 0) {
-                    const mostRecent = parsed[0];
-                    setCurrentSessionId(mostRecent.id);
-                    setMessages(mostRecent.messages);
-                }
-            } catch (e) {
-                console.error("Failed to load sessions", e);
-            }
-        } else {
-            // Migration: Check for old single-session history
-            const oldHistory = localStorage.getItem('garuda-chat-history');
-            if (oldHistory) {
-                try {
-                    const oldMessages = JSON.parse(oldHistory);
-                    if (oldMessages.length > 0) {
-                        const newSession: Session = {
-                            id: Date.now().toString(),
-                            title: 'Previous Chat',
-                            timestamp: Date.now(),
-                            messages: oldMessages
-                        };
-                        setSessions([newSession]);
-                        setCurrentSessionId(newSession.id);
-                        setMessages(oldMessages);
-                        localStorage.setItem('garuda-sessions', JSON.stringify([newSession]));
-                        localStorage.removeItem('garuda-chat-history'); // Cleanup
+        if (status === 'authenticated') {
+            fetch('/api/sessions')
+                .then(res => res.json())
+                .then(data => {
+                    if (Array.isArray(data)) {
+                        setSessions(data);
                     }
-                } catch (e) { }
-            }
+                    setIsInitialized(true);
+                })
+                .catch(err => {
+                    console.error("Failed to load sessions", err);
+                    setIsInitialized(true);
+                });
+        }
+        
+        setCurrentSessionId(null);
+        setMessages([]);
+        setIsInitialized(true);
+
+        // Unregister any lingering service workers from previous PWA builds
+        // This is critical because the old service worker caches the old UI!
+        if (typeof window !== 'undefined' && 'serviceWorker' in navigator) {
+            navigator.serviceWorker.getRegistrations().then((registrations) => {
+                for (let registration of registrations) {
+                    registration.unregister();
+                }
+            });
+        }
+
+        // Clear chat when returning to the foreground (resuming app)
+        if (typeof window !== 'undefined') {
+            import('@capacitor/app').then(({ App }) => {
+                App.addListener('appStateChange', ({ isActive }) => {
+                    if (isActive) {
+                        setCurrentSessionId(null);
+                        setMessages([]);
+                    }
+                });
+            }).catch(() => {
+                console.log("Not running in Capacitor environment");
+            });
         }
     }, []);
 
@@ -84,17 +114,31 @@ export default function Chat() {
         document.body.setAttribute('data-theme', theme);
     }, [theme]);
 
-    // Effect: Save Sessions whenever they change
+    // Effect: Capture PWA install prompt
     useEffect(() => {
-        if (sessions.length > 0) {
-            localStorage.setItem('garuda-sessions', JSON.stringify(sessions));
-        }
-    }, [sessions]);
+        const handler = (e: any) => {
+            e.preventDefault();
+            setDeferredPrompt(e);
+        };
+        window.addEventListener('beforeinstallprompt', handler);
+        return () => window.removeEventListener('beforeinstallprompt', handler);
+    }, []);
+
+    // Sessions are saved directly to DB now
 
     // Effect: Scroll on message update
     useEffect(() => {
         scrollToBottom();
     }, [messages]);
+
+    const handleInstallClick = async () => {
+        if (!deferredPrompt) return;
+        deferredPrompt.prompt();
+        const { outcome } = await deferredPrompt.userChoice;
+        if (outcome === 'accepted') {
+            setDeferredPrompt(null);
+        }
+    };
 
     const toggleTheme = () => {
         setTheme(prev => prev === 'dharma' ? 'forest' : 'dharma');
@@ -119,34 +163,63 @@ export default function Chat() {
         }
     };
 
-    const updateCurrentSession = (updatedMessages: Message[]) => {
+    const deleteSession = async (e: React.MouseEvent, sessionId: string) => {
+        e.stopPropagation(); // Don't trigger selectSession
+        
+        // Optimistic UI
+        setSessions(prev => prev.filter(s => s.id !== sessionId));
+        if (currentSessionId === sessionId) {
+            setCurrentSessionId(null);
+            setMessages([]);
+        }
+
+        // Delete from server
+        try {
+            await fetch(`/api/sessions/${sessionId}`, { method: 'DELETE' });
+        } catch (e) {
+            console.error('Failed to delete', e);
+        }
+    };
+
+    const deleteAllSessions = async () => {
+        if (window.confirm("Are you sure you want to delete all historical chats?")) {
+            const sessionsToDelete = [...sessions];
+            setSessions([]);
+            setCurrentSessionId(null);
+            setMessages([]);
+            setIsSidebarOpen(false);
+            
+            // Delete all individually
+            for (const s of sessionsToDelete) {
+                await fetch(`/api/sessions/${s.id}`, { method: 'DELETE' });
+            }
+        }
+    };
+
+    const updateCurrentSession = (updatedMessages: Message[], sessionId: string) => {
         setSessions(prev => {
             let newSessions = [...prev];
 
-            if (currentSessionId) {
+            const index = newSessions.findIndex(s => s.id === sessionId);
+            if (index !== -1) {
                 // Update existing
-                const index = newSessions.findIndex(s => s.id === currentSessionId);
-                if (index !== -1) {
-                    newSessions[index] = { ...newSessions[index], messages: updatedMessages };
-                    // Move to top
-                    const moved = newSessions.splice(index, 1)[0];
-                    newSessions.unshift(moved);
-                }
+                newSessions[index] = { ...newSessions[index], messages: updatedMessages };
+                // Move to top
+                const moved = newSessions.splice(index, 1)[0];
+                newSessions.unshift(moved);
             } else {
                 // Create new session
                 // Generate title from first message
                 const firstUserMsg = updatedMessages.find(m => m.role === 'user');
                 const title = firstUserMsg ? firstUserMsg.content.slice(0, 30) + (firstUserMsg.content.length > 30 ? '...' : '') : 'New Chat';
 
-                const newId = Date.now().toString();
                 const newSession: Session = {
-                    id: newId,
+                    id: sessionId,
                     title: title,
                     timestamp: Date.now(),
                     messages: updatedMessages
                 };
                 newSessions.unshift(newSession);
-                setCurrentSessionId(newId);
             }
             return newSessions;
         });
@@ -176,23 +249,37 @@ export default function Chat() {
             content: input,
         };
 
+        let activeSessionId = currentSessionId;
+        if (!activeSessionId) {
+            activeSessionId = Date.now().toString();
+            setCurrentSessionId(activeSessionId);
+        }
+
         const newMessages = [...messages, userMessage];
         setMessages(newMessages);
-        updateCurrentSession(newMessages); // Save to session immediately
+        updateCurrentSession(newMessages, activeSessionId); // Save to session immediately
 
         setInput('');
         setIsLoading(true);
 
         try {
-            const response = await fetch('/api/chat', {
+        // Using relative URL to ensure it works properly locally and on Vercel
+        const response = await fetch('/api/chat', {
                 method: 'POST',
                 headers: { 'Content-Type': 'application/json' },
                 body: JSON.stringify({
                     messages: newMessages,
+                    filter: activeFilter,
+                    sessionId: activeSessionId,
+                    title: newMessages[0].content.slice(0, 30)
                 }),
             });
 
-            if (!response.ok) throw new Error('Network response was not ok');
+            if (!response.ok) {
+                let errText = '';
+                try { errText = await response.text(); } catch(e) {}
+                throw new Error(`Status ${response.status}: ${errText.slice(0, 150)}`);
+            }
             if (!response.body) return;
 
             const reader = response.body.getReader();
@@ -229,18 +316,30 @@ export default function Chat() {
             const finalMessages = messagesWithAi.map(m =>
                 m.id === aiMessageId ? { ...m, content: accumuluatedContent } : m
             );
-            updateCurrentSession(finalMessages);
+            updateCurrentSession(finalMessages, activeSessionId);
 
-        } catch (error) {
+        } catch (error: any) {
             console.error('Error fetching chat:', error);
-            const errorMsg: Message = { id: (Date.now() + 2).toString(), role: 'assistant', content: 'Sorry, I encountered an error connecting to the spiritual realm.' };
+            const errorDetail = error?.message || 'Unknown network error';
+            const errorMsg: Message = { 
+                id: (Date.now() + 2).toString(), 
+                role: 'assistant', 
+                content: `Sorry, I encountered an error connecting to the spiritual realm.\n\n*Details: ${errorDetail}*` 
+            };
             const finalWithErr = [...newMessages, errorMsg];
             setMessages(finalWithErr);
-            updateCurrentSession(finalWithErr);
+            updateCurrentSession(finalWithErr, activeSessionId);
         } finally {
             setIsLoading(false);
         }
     };
+
+    if (status === 'loading') {
+        return <div style={{ height: '100vh', display: 'flex', alignItems: 'center', justifyContent: 'center', background: 'var(--bg-primary)', color: 'var(--color-saffron-500)' }}><h3 style={{fontFamily: 'var(--font-serif)'}}>Communing...</h3></div>;
+    }
+    if (status === 'unauthenticated') {
+        return <LoginModal />;
+    }
 
     return (
         <div className={styles.container}>
@@ -257,6 +356,15 @@ export default function Chat() {
                 <button className="new-chat-btn" onClick={startNewChat}>
                     <span>+</span> New Chat
                 </button>
+                {sessions.length > 0 && (
+                    <button 
+                        className="new-chat-btn" 
+                        style={{background: 'rgba(255, 80, 80, 0.1)', color: '#ff6b6b', marginTop: '-0.5rem', marginBottom: '1rem', border: '1px solid rgba(255, 80, 80, 0.2)'}} 
+                        onClick={deleteAllSessions}
+                    >
+                        🗑 Delete All Chats
+                    </button>
+                )}
 
                 <div className="session-list">
                     {sessions.map(session => (
@@ -265,8 +373,18 @@ export default function Chat() {
                             className={`session-item ${currentSessionId === session.id ? 'active' : ''}`}
                             onClick={() => selectSession(session.id)}
                         >
-                            <div className="session-title">{session.title}</div>
-                            <div className="session-date">{new Date(session.timestamp).toLocaleDateString()}</div>
+                            <div className="session-item-content">
+                                <div className="session-title">{session.title}</div>
+                                <div className="session-date">{new Date(session.timestamp).toLocaleDateString()}</div>
+                            </div>
+                            <button
+                                className="session-delete-btn"
+                                onClick={(e) => deleteSession(e, session.id)}
+                                title="Delete chat"
+                                aria-label="Delete chat"
+                            >
+                                🗑
+                            </button>
                         </div>
                     ))}
                 </div>
@@ -279,24 +397,48 @@ export default function Chat() {
                     <div style={{ width: '40px', display: 'block' }} className="mobile-spacer"></div>
 
                     <div style={{ textAlign: 'center', flexGrow: 1 }}>
-                        <h1 className={styles.title}>Garuda</h1>
-                        <p className={styles.subtitle}>Wisdom from the Eternal Scriptures</p>
+                        <h1 className={styles.title}>Garuda AI</h1>
+                        <p className={styles.subtitle}>Sacred Intelligence</p>
                     </div>
 
-                    <button onClick={toggleTheme} className={styles.sendButton} style={{ width: '36px', height: '36px', background: 'transparent', border: '1px solid var(--color-saffron-500)' }} title="Toggle Theme" suppressHydrationWarning>
-                        {theme === 'dharma' ? '🌙' : '🌿'}
-                    </button>
+                    <div style={{ display: 'flex', gap: '0.75rem', width: 'auto', minWidth: '40px', justifyContent: 'flex-end', alignItems: 'center' }} suppressHydrationWarning>
+                        <button onClick={() => signOut()} style={{ background: 'transparent', border: '1px solid rgba(255,255,255,0.2)', color: 'var(--color-text-secondary)', padding: '0 0.75rem', height: '32px', borderRadius: '16px', fontSize: '0.8rem', cursor: 'pointer' }} title="Sign Out">Sign Out</button>
+                        {deferredPrompt && (
+                            <button
+                                onClick={handleInstallClick}
+                                style={{
+                                    height: '40px',
+                                    padding: '0 1rem',
+                                    background: 'linear-gradient(135deg, var(--color-saffron-500), var(--color-saffron-700))',
+                                    border: 'none',
+                                    borderRadius: '20px',
+                                    color: 'var(--bg-primary)',
+                                    fontWeight: 'bold',
+                                    cursor: 'pointer',
+                                    display: 'flex',
+                                    alignItems: 'center',
+                                    gap: '0.4rem',
+                                    boxShadow: '0 4px 15px rgba(212, 175, 55, 0.3)'
+                                }}
+                            >
+                                <span>📱</span> <span className="hide-on-mobile" style={{ fontSize: '0.9rem' }}>Install</span>
+                            </button>
+                        )}
+                        <button onClick={toggleTheme} style={{ width: '40px', height: '40px', flexShrink: 0, background: 'rgba(255,255,255,0.05)', border: '1px solid rgba(255,255,255,0.1)', borderRadius: '50%', color: 'var(--color-saffron-500)', cursor: 'pointer', transition: 'all 0.3s ease' }} title="Toggle Theme" suppressHydrationWarning>
+                            {theme === 'dharma' ? '🌙' : '🌿'}
+                        </button>
+                    </div>
                 </div>
             </header>
-
-            <DailyQuote />
 
             <div className={styles.chatWindow}>
                 {messages.length === 0 ? (
                     <div className={styles.emptyState}>
+                        <DailyQuote />
                         <div className={styles.om}>ॐ</div>
-                        <p>Ask a question to receive guidance from the ancient texts.</p>
-                        <p style={{ marginTop: '0.5rem', fontSize: '0.8rem', opacity: 0.6 }}>Examples: &quot;Why do we suffer?&quot;, &quot;What is Dharma?&quot;, &quot;How to find peace?&quot;</p>
+                        <h2 className={styles.emptyStateTitle}>Divine Intelligence</h2>
+                        <p className={styles.emptyStateDesc}>Seek wisdom from the eternal scriptures. Ask a question about life, dharma, or spiritual truth.</p>
+                        <p style={{ marginTop: '0.5rem', fontSize: '0.85rem', opacity: 0.5 }}>Examples: &quot;Why do we suffer?&quot;, &quot;What is Dharma?&quot;, &quot;How to find inner peace?&quot;</p>
                     </div>
                 ) : (
                     messages.map((m) => (
@@ -307,7 +449,14 @@ export default function Chat() {
                         >
                             <div
                                 className="whitespace-pre-wrap"
-                                dangerouslySetInnerHTML={{ __html: m.content.replace(/\n/g, '<br/>').replace(/\*\*(.*?)\*\*/g, '<strong>$1</strong>') }}
+                                dangerouslySetInnerHTML={{ 
+                                    __html: m.content
+                                        .replace(/\n/g, '<br/>')
+                                        .replace(/\*\*(.*?)\*\*/g, '<strong>$1</strong>')
+                                        .replace(/\[Source: (.*?)\]/g, (_match: string, filename: string) => 
+                                            `<span class="citation">📜 ${prettifySource(filename)}</span>`
+                                        )
+                                }}
                             />
                             {m.role === 'assistant' && !isLoading && (
                                 <button
@@ -325,14 +474,44 @@ export default function Chat() {
                     ))
                 )}
                 {isLoading && messages[messages.length - 1]?.role !== 'assistant' && (
-                    <div className={`${styles.message} ${styles.aiMessage}`}>
-                        <span style={{ color: 'var(--color-gold-500)' }}>Contemplating the scriptures...</span>
+                    <div className={styles.contemplatingWrapper}>
+                        <div style={{ display: 'flex', alignItems: 'center', gap: '0.6rem' }}>
+                            <div className={styles.dots}>
+                                <div className={styles.dot} />
+                                <div className={styles.dot} />
+                                <div className={styles.dot} />
+                            </div>
+                            <span className={styles.contemplatingText}>Searching the scriptures…</span>
+                        </div>
+                        <div className={styles.contemplatingBooks}>
+                            {(activeFilter === 'all' ? ['Bhagavad Gita', 'Uddhava Gita', 'Śrīmad Bhāgavatam'] :
+                                activeFilter === 'bg' ? ['Bhagavad Gita'] :
+                                activeFilter === 'uddhava' ? ['Uddhava Gita'] :
+                                ['Śrīmad Bhāgavatam']
+                            ).map(book => (
+                                <span key={book} className={styles.contemplatingBook}>📜 {book}</span>
+                            ))}
+                        </div>
                     </div>
                 )}
                 <div ref={messagesEndRef} />
             </div>
 
             <div className={styles.inputArea}>
+                {/* Book Filter Chips */}
+                <div className={styles.filterBar} style={{ marginBottom: '0.75rem', width: '100%', maxWidth: '800px' }}>
+                    <span className={styles.filterLabel}>Search in:</span>
+                    {BOOKS.map(book => (
+                        <button
+                            key={book.id}
+                            type="button"
+                            className={`${styles.filterChip} ${activeFilter === book.id ? styles.filterChipActive : ''}`}
+                            onClick={() => setActiveFilter(book.id)}
+                        >
+                            {book.icon} {book.label}
+                        </button>
+                    ))}
+                </div>
                 <form onSubmit={handleSubmit} className={styles.form}>
                     <input
                         className={styles.input}

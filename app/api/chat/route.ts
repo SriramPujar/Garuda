@@ -66,66 +66,251 @@ function createOllamaStream(reader: ReadableStreamDefaultReader<Uint8Array>) {
     });
 }
 
+import fs from 'fs';
+import path from 'path';
+import prisma from '@/lib/prisma';
+import { getServerSession } from 'next-auth';
+import { authOptions } from '../auth/[...nextauth]/route';
+
+let cachedVectorStore: any = null;
+
+function loadVectorStore() {
+    if (cachedVectorStore) return cachedVectorStore;
+    try {
+        const filePath = path.join(process.cwd(), 'data', 'vector_store.json');
+        const data = fs.readFileSync(filePath, 'utf8');
+        cachedVectorStore = JSON.parse(data);
+    } catch (e) {
+        console.warn("No vector store found. RAG disabled.");
+        cachedVectorStore = [];
+    }
+    return cachedVectorStore;
+}
+
+function cosineSimilarity(A: number[], B: number[]) {
+    let dotProduct = 0;
+    let normA = 0;
+    let normB = 0;
+    for (let i = 0; i < A.length; i++) {
+        dotProduct += A[i] * B[i];
+        normA += A[i] * A[i];
+        normB += B[i] * B[i];
+    }
+    if (normA === 0 || normB === 0) return 0;
+    return dotProduct / (Math.sqrt(normA) * Math.sqrt(normB));
+}
+
+const CORS_HEADERS = {
+    'Access-Control-Allow-Origin': '*',
+    'Access-Control-Allow-Methods': 'POST, OPTIONS, GET',
+    'Access-Control-Allow-Headers': 'Content-Type, Authorization, X-Requested-With',
+    'Access-Control-Max-Age': '86400',
+};
+
+export async function OPTIONS() {
+    return new Response(null, { status: 204, headers: CORS_HEADERS });
+}
+
 export async function POST(req: Request) {
-    const { messages } = await req.json();
+    const { messages, filter, sessionId, title } = await req.json();
+    const sessionUser = await getServerSession(authOptions);
+    const userId = sessionUser?.user?.id;
 
-    const systemPrompt = `Role
+    const systemPrompt = `You are Garuda — a wise and compassionate spiritual guide deeply versed in the sacred teachings of the **Bhagavad Gita**, **Uddhava Gita**, and **Shrimad Bhagavatam**. You embody the loving wisdom of Krishna's teachings and speak with clarity, depth, and reverence.
 
-You are a wise spiritual guide and philosopher deeply versed in Vedic wisdom, specifically trained in the teachings of the **Bhagavad Gita**, **Uddhava Gita**, and **Shrimad Bhagavatam**. You embody the compassionate and enlightening spirit of Krishna's teachings.
+# Your Sacred Duty
 
-# Task
+Answer philosophical and spiritual questions posed by seekers by drawing **exclusively** from the retrieved scriptural passages provided to you in the context below. Do not invent or fabricate verses. If the retrieved context does not address the question directly, acknowledge this humbly and offer related wisdom.
 
-Your task is to provide thoughtful, profound answers to philosophical questions posed by seekers, drawing exclusively from the wisdom contained in the Bhagavad Gita, Uddhava Gita, and Shrimad Bhagavatam.
+# Response Style — Use Judgment
 
-# Instructions
+**Adapt your structure to the question:**
 
-1. **Listen carefully** to the philosophical question presented by the seeker
-2. **Reflect on the teachings** from the three sacred texts that relate to the question
-3. **Select relevant verses or concepts** that directly address the inquiry
-4. **Explain the wisdom** in a clear, accessible manner while maintaining its depth
-5. **Provide context** when necessary to help the seeker understand the teaching
-6. **Reference specific texts** when quoting or citing particular verses
-7. **Connect the ancient wisdom** to the seeker's contemporary concern when appropriate
+- **Simple or conversational questions** (greetings, quick factual queries, clarifications): Respond naturally and warmly in 2–4 sentences. No headers needed. Start with "Hare Rama! 🙏" and end with a brief closing.
 
-# Guidelines
+- **Deep philosophical or practical questions** (about dharma, suffering, liberation, spiritual practice, life problems): Use the structured format below.
 
-- **Stay true to the source texts** - only draw from Bhagavad Gita, Uddhava Gita, and Shrimad Bhagavatam
-- **Be compassionate and non-judgmental** - approach each question with the loving spirit of Krishna
-- **Maintain spiritual depth** while being accessible to seekers at all levels
-- **Quote verses when relevant** - provide chapter and verse references
-- **Explain Sanskrit terms** when you use them
-- **Acknowledge complexity** - if a question has multiple perspectives within the texts, present them
-- **Be honest about limitations** - if a specific question is not directly addressed in these texts, acknowledge it while offering related wisdom
+**Structured format (only when the question warrants depth):**
 
-# Output
+Hare Rama! 🙏
 
-Structure your response as follows:
-
-Hare Rama!
-
-**[Brief acknowledgment of the question]**
+**[A brief, warm acknowledgment of the seeker's question]**
 
 **Teaching:**
-[Your main answer drawing from the sacred texts, including relevant quotes, verses, and explanations]
+[Your answer, woven from the retrieved scriptural passages. Quote directly from the context when possible. Explain Sanskrit terms when used.]
 
 **Practical Wisdom:**
-[How this teaching can be applied or understood in practical terms]
+[How this ancient teaching applies to the seeker's life today.]
 
-**Reference:**
-[Specific citations from Bhagavad Gita, Uddhava Gita, or Shrimad Bhagavatam that support your answer]
+**References:**
+[List every source you used. For EACH source PDF you drew from, output it on its own line in this exact format: [Source: filename.pdf]. Example: [Source: 1972_Bhagavad_gita-As_It_Is-Original_authorized_Macmillan_edition.pdf]]
 
 ---
-
-*Note: If the question requires clarification, ask the seeker for more details before providing your answer.*
-
-Hare Krishna!
+Hare Krishna! 🙏
 `;
+
+
+    // ── Smart RAG: Cloud (Qdrant + HF) or Local (Ollama + JSON) ──
+    let contextText = '';
+    try {
+        const lastMessage = getMessageContent(messages[messages.length - 1]);
+        if (!lastMessage) throw new Error('No message');
+
+        const isCloud = !!process.env.QDRANT_URL && !!process.env.HF_API_KEY;
+
+        // ── Embed the query ──────────────────────────────────────
+        let queryVector: number[] | null = null;
+
+        if (isCloud) {
+            // Production: Hugging Face Inference API (free)
+            console.log('RAG: Embedding via Hugging Face...');
+            const hfRes = await fetch(
+                'https://api-inference.huggingface.co/pipeline/feature-extraction/sentence-transformers/all-MiniLM-L6-v2',
+                {
+                    method: 'POST',
+                    headers: {
+                        'Authorization': `Bearer ${process.env.HF_API_KEY}`,
+                        'Content-Type': 'application/json',
+                    },
+                    body: JSON.stringify({ inputs: lastMessage, options: { wait_for_model: true } }),
+                }
+            );
+            if (hfRes.ok) {
+                const hfData = await hfRes.json();
+                // HF returns a nested array for batch input — unwrap first item
+                queryVector = Array.isArray(hfData[0]) ? hfData[0] : hfData;
+            }
+        } else {
+            // Local: Ollama nomic-embed-text
+            console.log('RAG: Embedding via Ollama...');
+            const embRes = await fetch('http://localhost:11434/api/embeddings', {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({ model: 'nomic-embed-text', prompt: lastMessage }),
+            });
+            if (embRes.ok) {
+                const embData = await embRes.json();
+                queryVector = embData.embedding;
+            }
+        }
+
+        if (!queryVector) throw new Error('Failed to generate embedding');
+
+        // ── Search the vector store ──────────────────────────────
+        const filterMap: Record<string, string[]> = {
+            bg:         ['bhagavad', 'gita-as-it-is', 'gita_as_it_is'],
+            uddhava:    ['uddhava'],
+            bhagavatam: ['bhagavata', 'bhagavatam', 'mahapurana'],
+        };
+
+        if (isCloud) {
+            // Production: Qdrant Cloud — native similarity search
+            console.log('RAG: Searching Qdrant Cloud...');
+            const qdrantBody: any = {
+                vector: queryVector,
+                limit: 6,
+                with_payload: true,
+            };
+
+            // Apply source filter if not 'all'
+            if (filter && filter !== 'all' && filterMap[filter]) {
+                const keywords = filterMap[filter];
+                qdrantBody.filter = {
+                    should: keywords.map((kw: string) => ({
+                        key: 'source',
+                        match: { text: kw },
+                    })),
+                };
+            }
+
+            const qdrantRes = await fetch(
+                `${process.env.QDRANT_URL}/collections/garuda_scriptures/points/search`,
+                {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json',
+                        'api-key': process.env.QDRANT_API_KEY || '',
+                    },
+                    body: JSON.stringify(qdrantBody),
+                }
+            );
+
+            if (qdrantRes.ok) {
+                const qdrantData = await qdrantRes.json();
+                const hits = qdrantData.result || [];
+                contextText = hits
+                    .map((h: any) => `[Source: ${h.payload.source}]\n${h.payload.text}`)
+                    .join('\n\n');
+                console.log(`RAG: Retrieved ${hits.length} passages from Qdrant.`);
+            }
+        } else {
+            // Local: in-memory cosine similarity over vector_store.json
+            console.log('RAG: Searching local vector store...');
+            const vs = loadVectorStore();
+            if (vs && vs.length > 0) {
+                const filteredVs = (filter && filter !== 'all' && filterMap[filter])
+                    ? vs.filter((v: any) => filterMap[filter].some((kw: string) => v.source.toLowerCase().includes(kw)))
+                    : vs;
+
+                const scored = filteredVs.map((v: any) => ({
+                    ...v,
+                    score: cosineSimilarity(queryVector!, v.embedding),
+                }));
+                scored.sort((a: any, b: any) => b.score - a.score);
+                const topChunks = scored.slice(0, 6);
+                contextText = topChunks.map((c: any) => `[Source: ${c.source}]\n${c.text}`).join('\n\n');
+                console.log(`RAG: Retrieved ${topChunks.length} passages from local store.`);
+            }
+        }
+    } catch (e) {
+        console.error('RAG Failure:', e);
+    }
+
+
+    const finalSystemPrompt = systemPrompt + (contextText ? `\n\n# RETRIEVED SCRIPTURAL CONTEXT\nThe following passages from the sacred texts have been retrieved based on the user's query. Use ONLY this information to construct your answer:\n\n${contextText}` : '');
 
     // Insert System Prompt
     const fullMessages = [
-        { role: 'system', content: systemPrompt },
+        { role: 'system', content: finalSystemPrompt },
         ...messages
     ];
+
+    // Helper to persist to DB
+    const persistChat = async (aiContent: string) => {
+        if (!userId) return;
+        try {
+            // Find or create session
+            let dbSession = await prisma.session.findUnique({ where: { id: sessionId } });
+            if (!dbSession) {
+                dbSession = await prisma.session.create({
+                    data: {
+                        id: sessionId,
+                        userId: userId,
+                        title: title || 'New Chat'
+                    }
+                });
+            }
+            // Save User Message (last one in messages array)
+            const userMsg = messages[messages.length - 1];
+            await prisma.message.create({
+                data: {
+                    sessionId: dbSession.id,
+                    role: 'user',
+                    content: getMessageContent(userMsg)
+                }
+            });
+            // Save AI Message
+            await prisma.message.create({
+                data: {
+                    sessionId: dbSession.id,
+                    role: 'assistant',
+                    content: aiContent
+                }
+            });
+        } catch (err) {
+            console.error('Failed to log message:', err);
+        }
+    };
 
     // Try Groq if Key exists
     if (process.env.GROQ_API_KEY) {
@@ -133,8 +318,11 @@ Hare Krishna!
             const result = streamText({
                 model: groq('llama-3.3-70b-versatile'), // Defaulting to high quality Groq model
                 messages: fullMessages,
+                onFinish: async ({ text }) => {
+                    await persistChat(text);
+                }
             });
-            return result.toTextStreamResponse();
+            return result.toTextStreamResponse({ headers: CORS_HEADERS });
         } catch (e) {
             console.error('Groq Error, falling back to Ollama', e);
         }
@@ -147,10 +335,10 @@ Hare Krishna!
 
         const reader = body.getReader();
         const stream = createOllamaStream(reader);
-        return new Response(stream);
+        return new Response(stream, { headers: CORS_HEADERS });
 
     } catch (e: any) {
-        return new Response(`Error: ${e.message}`, { status: 500 });
+        return new Response(`Error: ${e.message}`, { status: 500, headers: CORS_HEADERS });
     }
 }
 

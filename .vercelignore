@@ -1,0 +1,18 @@
+# Exclude massive RAG source files from the Vercel deploy
+# Cloud Qdrant + HF handle these now
+docs/
+data/
+scripts/
+error.log
+error.txt
+build.log
+build_*.log
+node_modules/
+.next/
+.vercel
+out/
+android/
+garuda_dist/
+dist/
+dist_*/
+electron/

@@ -34,26 +34,34 @@ export default function DailyQuote() {
     return (
         <div style={{
             textAlign: 'center',
-            padding: '1rem',
-            backgroundColor: 'var(--bg-secondary)',
-            borderBottom: '1px solid var(--color-saffron-700)',
-            marginBottom: '1rem',
-            boxShadow: '0 4px 6px -1px rgba(0, 0, 0, 0.1)',
-            animation: 'fadeIn 1s ease-in'
+            padding: '1.5rem',
+            margin: '1.5rem auto',
+            maxWidth: '600px',
+            backgroundColor: 'rgba(255, 255, 255, 0.02)',
+            border: '1px solid rgba(212, 175, 55, 0.15)',
+            borderRadius: '16px',
+            boxShadow: '0 8px 32px 0 rgba(0, 0, 0, 0.2)',
+            backdropFilter: 'blur(8px)',
+            animation: 'fadeUpReveal 1.2s cubic-bezier(0.16, 1, 0.3, 1) forwards'
         }}>
             <p style={{
                 fontFamily: 'var(--font-serif)',
-                color: 'var(--color-saffron-500)',
-                fontSize: '1.1rem',
+                color: 'var(--color-text-primary)',
+                fontSize: '1.15rem',
                 fontStyle: 'italic',
-                marginBottom: '0.25rem'
+                lineHeight: '1.6',
+                marginBottom: '0.75rem',
+                letterSpacing: '0.02em',
+                textShadow: '0 2px 10px rgba(0, 0, 0, 0.5)'
             }}>
                 &ldquo;{quote.text}&rdquo;
             </p>
             <span style={{
-                fontSize: '0.8rem',
-                color: 'var(--color-text-secondary)',
-                opacity: 0.8
+                fontSize: '0.85rem',
+                color: 'var(--color-saffron-500)',
+                letterSpacing: '0.1em',
+                textTransform: 'uppercase',
+                opacity: 0.9
             }}>
                 — {quote.source}
             </span>

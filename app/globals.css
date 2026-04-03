@@ -1,56 +1,52 @@
 :root {
-  /* Default Spiritual Palette (Dharma) */
-  --color-saffron-50: #fff5e6;
-  --color-saffron-100: #ffeccc;
-  --color-saffron-500: #ff9933;
-  /* Classic Saffron */
-  --color-saffron-700: #cc6600;
+  /* Premium Cosmic Identity (Dharma) */
+  --color-saffron-50: #fbf5ee;
+  --color-saffron-100: #f2e3d0;
+  --color-saffron-500: #D4AF37; /* Metallic Gold focus */
+  --color-saffron-700: #A88645;
 
-  --color-gold-500: #ffd700;
-  --color-gold-600: #d4af37;
-  /* Metallic Gold */
+  --color-gold-500: #D4AF37;
+  --color-gold-600: #A88645;
 
-  --color-deep-blue-900: #0f172a;
-  /* Midnight Blue */
-  --color-deep-blue-950: #020617;
+  --color-deep-blue-900: #0D162A; /* Cosmic Indigo Base */
+  --color-deep-blue-950: #060B14; /* Midnight background */
 
-  --color-text-primary: #f8fafc;
-  --color-text-secondary: #cbd5e1;
+  --color-text-primary: #F7F5F0; /* Lotus white */
+  --color-text-secondary: #BFCAD9;
 
   --bg-primary: var(--color-deep-blue-950);
   --bg-secondary: var(--color-deep-blue-900);
-  --bg-msg-user: rgba(255, 153, 51, 0.1);
-  --bg-msg-ai: rgba(15, 23, 42, 0.6);
+  
+  --bg-msg-user: rgba(23, 55, 64, 0.4); /* Muted teal glass */
+  --bg-msg-ai: rgba(255, 255, 255, 0.02); /* Clean glass for AI */
 
-  --gradient-header: linear-gradient(to bottom, rgba(2, 6, 23, 0.9), transparent);
-  --gradient-bg: radial-gradient(circle at 50% 0%, rgba(255, 153, 51, 0.15), transparent 70%),
-    radial-gradient(circle at 100% 100%, rgba(212, 175, 55, 0.1), transparent 50%);
+  --gradient-header: linear-gradient(to bottom, rgba(6, 11, 20, 0.9), transparent);
+  --gradient-bg: radial-gradient(circle at 15% 0%, rgba(13, 22, 42, 1) 0%, rgba(6, 11, 20, 1) 100%);
+  --aura-glow: radial-gradient(circle at 50% -20%, rgba(212, 175, 55, 0.15), transparent 70%);
 
-  --font-sans: 'Outfit', sans-serif;
-  --font-serif: 'Cinzel', serif;
+  --font-sans: var(--font-sans), sans-serif;
+  --font-serif: var(--font-serif), serif;
 }
 
 [data-theme='forest'] {
-  /* Vana (Forest) Palette - Earthy & Silver */
-  --color-saffron-500: #4ade80;
-  /* Green accent */
-  --color-saffron-700: #16a34a;
+  /* Premium Vana Theme - Emerald & Silver/Gold */
+  --color-saffron-500: #1CA880; /* Elegant emerald */
+  --color-saffron-700: #127558;
 
-  --color-gold-500: #e2e8f0;
-  /* Silver */
-  --color-gold-600: #94a3b8;
+  --color-gold-500: #C0C8C6;
+  --color-gold-600: #889A96;
 
-  --color-deep-blue-900: #1c1917;
-  /* Warm Dark Grey */
-  --color-deep-blue-950: #0c0a09;
+  --color-deep-blue-900: #0B1C1A; /* Deep dark teal/forest */
+  --color-deep-blue-950: #060F0E;
 
-  --bg-primary: #0c0a09;
-  --bg-secondary: #1c1917;
-  --bg-msg-user: rgba(74, 222, 128, 0.1);
-  --bg-msg-ai: rgba(28, 25, 23, 0.6);
+  --bg-primary: var(--color-deep-blue-950);
+  --bg-secondary: var(--color-deep-blue-900);
+  
+  --bg-msg-user: rgba(28, 168, 128, 0.1);
+  --bg-msg-ai: rgba(255, 255, 255, 0.02);
 
-  --gradient-bg: radial-gradient(circle at 50% 0%, rgba(74, 222, 128, 0.1), transparent 70%),
-    radial-gradient(circle at 0% 100%, rgba(226, 232, 240, 0.1), transparent 50%);
+  --gradient-bg: radial-gradient(circle at 15% 0%, rgba(11, 28, 26, 1) 0%, rgba(6, 15, 14, 1) 100%);
+  --aura-glow: radial-gradient(circle at 50% -20%, rgba(28, 168, 128, 0.1), transparent 70%);
 }
 
 * {
@@ -164,13 +160,47 @@ h6 {
 }
 
 .session-item {
-  padding: 0.75rem;
+  padding: 0.6rem 0.75rem;
   background: rgba(255, 255, 255, 0.05);
   border-radius: 4px;
   cursor: pointer;
   border: 1px solid transparent;
   transition: all 0.2s;
-  text-align: left;
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+}
+
+.session-item-content {
+  flex: 1;
+  min-width: 0; /* allow text truncation */
+}
+
+.session-delete-btn {
+  flex-shrink: 0;
+  background: transparent;
+  border: none;
+  color: var(--color-text-secondary);
+  cursor: pointer;
+  font-size: 1.1rem;
+  padding: 0.5rem;
+  border-radius: 4px;
+  opacity: 0.6;
+  transition: opacity 0.15s ease, background 0.15s ease;
+  line-height: 1;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+.session-item:hover .session-delete-btn,
+.session-delete-btn:hover {
+  opacity: 1;
+}
+
+.session-delete-btn:hover {
+  background: rgba(255, 80, 80, 0.15);
+  color: #ff6b6b;
 }
 
 .session-item:hover {
@@ -201,30 +231,75 @@ h6 {
 /* Toggle Button Position */
 .sidebar-toggle {
   position: fixed;
-  top: 1rem;
-  left: 1rem;
+  top: 1.5rem;
+  left: 1.5rem;
   z-index: 60;
-  background: var(--bg-secondary);
-  border: 1px solid var(--color-saffron-500);
-  width: 40px;
-  height: 40px;
-  border-radius: 4px;
+  background: rgba(255, 255, 255, 0.05);
+  border: 1px solid rgba(255, 255, 255, 0.1);
+  width: 44px;
+  height: 44px;
+  border-radius: 50%;
   color: var(--color-saffron-500);
   cursor: pointer;
   display: flex;
   align-items: center;
   justify-content: center;
+  backdrop-filter: blur(10px);
+  transition: all 0.3s ease;
+}
+.sidebar-toggle:hover {
+  background: rgba(255, 255, 255, 0.1);
+  transform: scale(1.05);
 }
 
-/* Adjust Main Container for Desktop */
-@media (min-width: 768px) {
-  .sidebar {
-    transform: translateX(0); /* Always open on desktop */
-  }
-  
-  .sidebar-toggle {
-    display: none;
-  }
-  
-  /* Assume main container shifts via margin in page component */
+/* ── Citation Chips ─────────────────────────────── */
+.citation {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.3rem;
+  margin: 0.2rem 0.25rem;
+  padding: 0.2rem 0.65rem;
+  background: linear-gradient(135deg, rgba(212, 175, 55, 0.12), rgba(212, 175, 55, 0.06));
+  border: 1px solid rgba(212, 175, 55, 0.35);
+  border-radius: 20px;
+  color: var(--color-gold-500, #D4AF37);
+  font-size: 0.72rem;
+  font-family: var(--font-body, sans-serif);
+  font-weight: 500;
+  letter-spacing: 0.03em;
+  vertical-align: middle;
+  box-shadow: 0 0 8px rgba(212, 175, 55, 0.1);
+  transition: all 0.2s ease;
 }
+.citation:hover {
+  background: linear-gradient(135deg, rgba(212, 175, 55, 0.22), rgba(212, 175, 55, 0.12));
+  box-shadow: 0 0 14px rgba(212, 175, 55, 0.25);
+  transform: translateY(-1px);
+}
+
+/* ── Verse Blockquotes ──────────────────────────── */
+.whitespace-pre-wrap blockquote,
+.message-content blockquote {
+  border-left: 3px solid var(--color-gold-500, #D4AF37);
+  margin: 0.75rem 0;
+  padding: 0.6rem 1rem;
+  background: rgba(212, 175, 55, 0.06);
+  border-radius: 0 8px 8px 0;
+  font-style: italic;
+  color: rgba(255, 255, 255, 0.85);
+}
+
+/* ── Reference Section ──────────────────────────── */
+.reference-section {
+  margin-top: 1rem;
+  padding-top: 0.75rem;
+  border-top: 1px solid rgba(212, 175, 55, 0.2);
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.4rem;
+  align-items: center;
+  font-size: 0.75rem;
+  color: var(--color-text-secondary, rgba(255,255,255,0.5));
+}
+.hide-on-mobile { display: inline; }
+@media (max-width: 600px) { .hide-on-mobile { display: none; } }
