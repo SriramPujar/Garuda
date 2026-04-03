@@ -45,6 +45,7 @@ export default function Chat() {
     const [messages, setMessages] = useState<Message[]>([]);
     const [isInitialized, setIsInitialized] = useState(false);
     const [deferredPrompt, setDeferredPrompt] = useState<any>(null);
+    const [isNative, setIsNative] = useState(false);
 
     const [input, setInput] = useState('');
     const [isLoading, setIsLoading] = useState(false);
@@ -62,6 +63,9 @@ export default function Chat() {
     useEffect(() => {
         const savedTheme = localStorage.getItem('garuda-theme') as 'dharma' | 'forest';
         if (savedTheme) setTheme(savedTheme);
+
+        // Detect native platform (Capacitor Android/iOS)
+        setIsNative(Capacitor.isNativePlatform());
 
         // Unregister lingering service workers
         if (typeof window !== 'undefined' && 'serviceWorker' in navigator) {
@@ -133,7 +137,15 @@ export default function Chat() {
     }, [messages]);
 
     const handleInstallClick = async () => {
-        if (!deferredPrompt) return;
+        if (isNative) {
+            // Already running as a native app on Android/iOS
+            alert('Garuda is already installed as an app on your device! ॐ');
+            return;
+        }
+        if (!deferredPrompt) {
+            alert('To install Garuda:\n\nOn Android Chrome: tap the ⋮ menu → "Add to Home screen"\nOn iOS Safari: tap Share (□↑) → "Add to Home Screen"');
+            return;
+        }
         deferredPrompt.prompt();
         const { outcome } = await deferredPrompt.userChoice;
         if (outcome === 'accepted') {
@@ -389,6 +401,41 @@ export default function Chat() {
                         </div>
                     ))}
                 </div>
+
+                {/* Sidebar Footer: Account info + actions (ChatGPT-style) */}
+                <div className="sidebar-footer">
+                    <div className="sidebar-footer-divider" />
+
+                    {/* Install App — always visible */}
+                    <button
+                        onClick={handleInstallClick}
+                        className="sidebar-footer-btn install-btn"
+                    >
+                        <span>📱</span>
+                        <span>{isNative ? 'App Installed ✓' : 'Install App'}</span>
+                    </button>
+
+                    {/* Sign Out row */}
+                    <button
+                        onClick={() => signOut()}
+                        className="sidebar-footer-btn"
+                        style={{ background: 'rgba(255,80,80,0.07)', borderColor: 'rgba(255,80,80,0.2)', color: '#ff8585', marginBottom: '0.5rem' }}
+                    >
+                        <span>↪</span>
+                        <span>Sign Out</span>
+                    </button>
+
+                    {/* User info row */}
+                    <div className="sidebar-user-row">
+                        <div className="sidebar-user-avatar">
+                            {(session?.user?.name || session?.user?.email || 'U')[0].toUpperCase()}
+                        </div>
+                        <div className="sidebar-user-info">
+                            <span className="sidebar-username">{session?.user?.name || session?.user?.email || 'User'}</span>
+                            <span style={{ fontSize: '0.72rem', color: 'var(--color-text-secondary)', opacity: 0.7 }}>Signed in</span>
+                        </div>
+                    </div>
+                </div>
             </div>
 
             {/* Main Content */}
@@ -403,28 +450,6 @@ export default function Chat() {
                     </div>
 
                     <div style={{ display: 'flex', gap: '0.75rem', width: 'auto', minWidth: '40px', justifyContent: 'flex-end', alignItems: 'center' }} suppressHydrationWarning>
-                        <button onClick={() => signOut()} style={{ background: 'transparent', border: '1px solid rgba(255,255,255,0.2)', color: 'var(--color-text-secondary)', padding: '0 0.75rem', height: '32px', borderRadius: '16px', fontSize: '0.8rem', cursor: 'pointer' }} title="Sign Out">Sign Out</button>
-                        {deferredPrompt && (
-                            <button
-                                onClick={handleInstallClick}
-                                style={{
-                                    height: '40px',
-                                    padding: '0 1rem',
-                                    background: 'linear-gradient(135deg, var(--color-saffron-500), var(--color-saffron-700))',
-                                    border: 'none',
-                                    borderRadius: '20px',
-                                    color: 'var(--bg-primary)',
-                                    fontWeight: 'bold',
-                                    cursor: 'pointer',
-                                    display: 'flex',
-                                    alignItems: 'center',
-                                    gap: '0.4rem',
-                                    boxShadow: '0 4px 15px rgba(212, 175, 55, 0.3)'
-                                }}
-                            >
-                                <span>📱</span> <span className="hide-on-mobile" style={{ fontSize: '0.9rem' }}>Install</span>
-                            </button>
-                        )}
                         <button onClick={toggleTheme} style={{ width: '40px', height: '40px', flexShrink: 0, background: 'rgba(255,255,255,0.05)', border: '1px solid rgba(255,255,255,0.1)', borderRadius: '50%', color: 'var(--color-saffron-500)', cursor: 'pointer', transition: 'all 0.3s ease' }} title="Toggle Theme" suppressHydrationWarning>
                             {theme === 'dharma' ? '🌙' : '🌿'}
                         </button>
