@@ -58,13 +58,37 @@ export default function Chat() {
         messagesEndRef.current?.scrollIntoView({ behavior: 'smooth' });
     };
 
-    // Initialize: Load Theme & Sessions from API
+    // Initialize: Theme & PWA setup (runs once)
     useEffect(() => {
-        // Theme
         const savedTheme = localStorage.getItem('garuda-theme') as 'dharma' | 'forest';
         if (savedTheme) setTheme(savedTheme);
 
+        // Unregister lingering service workers
+        if (typeof window !== 'undefined' && 'serviceWorker' in navigator) {
+            navigator.serviceWorker.getRegistrations().then((registrations) => {
+                for (let registration of registrations) {
+                    registration.unregister();
+                }
+            });
+        }
+
+        // Clear chat when resuming app (Capacitor)
+        if (typeof window !== 'undefined') {
+            import('@capacitor/app').then(({ App }) => {
+                App.addListener('appStateChange', ({ isActive }) => {
+                    if (isActive) {
+                        setCurrentSessionId(null);
+                        setMessages([]);
+                    }
+                });
+            }).catch(() => {});
+        }
+    }, []);
+
+    // Load sessions from DB whenever auth status becomes 'authenticated'
+    useEffect(() => {
         if (status === 'authenticated') {
+            setIsInitialized(false);
             fetch('/api/sessions')
                 .then(res => res.json())
                 .then(data => {
@@ -77,36 +101,13 @@ export default function Chat() {
                     console.error("Failed to load sessions", err);
                     setIsInitialized(true);
                 });
+        } else if (status === 'unauthenticated') {
+            setSessions([]);
+            setCurrentSessionId(null);
+            setMessages([]);
+            setIsInitialized(true);
         }
-        
-        setCurrentSessionId(null);
-        setMessages([]);
-        setIsInitialized(true);
-
-        // Unregister any lingering service workers from previous PWA builds
-        // This is critical because the old service worker caches the old UI!
-        if (typeof window !== 'undefined' && 'serviceWorker' in navigator) {
-            navigator.serviceWorker.getRegistrations().then((registrations) => {
-                for (let registration of registrations) {
-                    registration.unregister();
-                }
-            });
-        }
-
-        // Clear chat when returning to the foreground (resuming app)
-        if (typeof window !== 'undefined') {
-            import('@capacitor/app').then(({ App }) => {
-                App.addListener('appStateChange', ({ isActive }) => {
-                    if (isActive) {
-                        setCurrentSessionId(null);
-                        setMessages([]);
-                    }
-                });
-            }).catch(() => {
-                console.log("Not running in Capacitor environment");
-            });
-        }
-    }, []);
+    }, [status]);
 
     // Effect: Sync Theme changes
     useEffect(() => {
