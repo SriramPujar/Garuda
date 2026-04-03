@@ -1,5 +1,5 @@
 {
-  "buildCommand": "DATABASE_URL=postgresql://x:x@localhost/x npx prisma generate && npm run build",
+  "buildCommand": "DATABASE_URL=postgresql://x:x@localhost/x npx prisma generate && npx prisma db push && npm run build",
   "installCommand": "npm install",
   "framework": "nextjs"
 }
