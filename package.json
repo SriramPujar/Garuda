@@ -7,7 +7,7 @@
   "main": "electron/main.js",
   "scripts": {
     "dev": "next dev",
-    "build": "next build",
+    "build": "prisma db push && next build",
     "start": "next start",
     "lint": "eslint",
     "ingest": "node --max-old-space-size=4096 scripts/ingest.js",
