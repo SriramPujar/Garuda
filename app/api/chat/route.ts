@@ -122,28 +122,19 @@ export async function POST(req: Request) {
 
 Answer philosophical and spiritual questions posed by seekers by drawing **exclusively** from the retrieved scriptural passages provided to you in the context below. Do not invent or fabricate verses. If the retrieved context does not address the question directly, acknowledge this humbly and offer related wisdom.
 
-# Response Style — Use Judgment
+# Response Style & Structure
 
-**Adapt your structure to the question:**
+Analyze the complexity and depth of the user's question to determine your answer length and format:
+1. **Short/Conversational (1-3 sentences):** For greetings, simple facts, or clarifications. Keep it warm and direct.
+2. **Medium (1-2 paragraphs):** For moderate questions requiring a clear, concise explanation of a specific teaching.
+3. **In-depth (Comprehensive):** For deep philosophical inquiries or complex life problems. Break down the answer logically and comprehensively.
 
-- **Simple or conversational questions** (greetings, quick factual queries, clarifications): Respond naturally and warmly in 2–4 sentences. No headers needed. Start with "Hare Rama! 🙏" and end with a brief closing.
-
-- **Deep philosophical or practical questions** (about dharma, suffering, liberation, spiritual practice, life problems): Use the structured format below.
-
-**Structured format (only when the question warrants depth):**
-
-Hare Rama! 🙏
-
-**[A brief, warm acknowledgment of the seeker's question]**
-
-**Teaching:**
-[Your answer, woven from the retrieved scriptural passages. Quote directly from the context when possible. Explain Sanskrit terms when used.]
-
-**Practical Wisdom:**
-[How this ancient teaching applies to the seeker's life today.]
-
-**References:**
-[List every source you used. For EACH source PDF you drew from, output it on its own line in this exact format: [Source: filename.pdf]. Example: [Source: 1972_Bhagavad_gita-As_It_Is-Original_authorized_Macmillan_edition.pdf]]
+Format guidelines:
+- Start warmly with "Hare Rama! 🙏" (unless continuing an ongoing conversation naturally).
+- Weave the retrieved scriptural passages smoothly into your answer. Explain any Sanskrit terms you use.
+- Relate the ancient wisdom to the user's modern context in a practical way.
+- Do NOT use rigid block headers like "Teaching:" or "Practical Wisdom:". Let the conversation flow organically to suit the question.
+- **References:** At the very end of your response, list your sources. For EACH source PDF you drew from, output it on its own line in this exact format: [Source: filename.pdf].
 
 ---
 Hare Krishna! 🙏
@@ -156,7 +147,7 @@ Hare Krishna! 🙏
         const lastMessage = getMessageContent(messages[messages.length - 1]);
         if (!lastMessage) throw new Error('No message');
 
-        const isCloud = !!process.env.QDRANT_URL && !!process.env.HF_API_KEY;
+        const isCloud = !!process.env.HF_API_KEY;
 
         // ── Embed the query ──────────────────────────────────────
         let queryVector: number[] | null = null;
@@ -204,45 +195,37 @@ Hare Krishna! 🙏
         };
 
         if (isCloud) {
-            // Production: Qdrant Cloud — native similarity search
-            console.log('RAG: Searching Qdrant Cloud...');
-            const qdrantBody: any = {
-                vector: queryVector,
-                limit: 6,
-                with_payload: true,
-            };
+            // Production: Neon pgvector similarity search
+            console.log('RAG: Searching Neon pgvector...');
+            
+            const embeddingLiteral = `[${queryVector.join(',')}]`;
+            let hits: any[] = [];
 
             // Apply source filter if not 'all'
             if (filter && filter !== 'all' && filterMap[filter]) {
                 const keywords = filterMap[filter];
-                qdrantBody.filter = {
-                    should: keywords.map((kw: string) => ({
-                        key: 'source',
-                        match: { text: kw },
-                    })),
-                };
+                const likeConds = keywords.map((kw: string) => `source ILIKE '%${kw}%'`).join(' OR ');
+                
+                hits = await prisma.$queryRawUnsafe(`
+                    SELECT source, text, 1 - (embedding <=> $1::vector) as similarity
+                    FROM "Scripture"
+                    WHERE ${likeConds}
+                    ORDER BY embedding <=> $1::vector
+                    LIMIT 6
+                `, embeddingLiteral);
+            } else {
+                hits = await prisma.$queryRawUnsafe(`
+                    SELECT source, text, 1 - (embedding <=> $1::vector) as similarity
+                    FROM "Scripture"
+                    ORDER BY embedding <=> $1::vector
+                    LIMIT 6
+                `, embeddingLiteral);
             }
 
-            const qdrantRes = await fetch(
-                `${process.env.QDRANT_URL}/collections/garuda_scriptures/points/search`,
-                {
-                    method: 'POST',
-                    headers: {
-                        'Content-Type': 'application/json',
-                        'api-key': process.env.QDRANT_API_KEY || '',
-                    },
-                    body: JSON.stringify(qdrantBody),
-                }
-            );
-
-            if (qdrantRes.ok) {
-                const qdrantData = await qdrantRes.json();
-                const hits = qdrantData.result || [];
-                contextText = hits
-                    .map((h: any) => `[Source: ${h.payload.source}]\n${h.payload.text}`)
-                    .join('\n\n');
-                console.log(`RAG: Retrieved ${hits.length} passages from Qdrant.`);
-            }
+            contextText = hits
+                .map((h: any) => `[Source: ${h.source}]\n${h.text}`)
+                .join('\n\n');
+            console.log(`RAG: Retrieved ${hits.length} passages from pgvector.`);
         } else {
             // Local: in-memory cosine similarity over vector_store.json
             console.log('RAG: Searching local vector store...');
