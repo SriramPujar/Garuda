@@ -116,11 +116,19 @@ export async function POST(req: Request) {
     const sessionUser = await getServerSession(authOptions);
     const userId = sessionUser?.user?.id;
 
-    const systemPrompt = `You are Garuda — a wise and compassionate spiritual guide deeply versed in the sacred teachings of the **Bhagavad Gita**, **Uddhava Gita**, and **Shrimad Bhagavatam**. You embody the loving wisdom of Krishna's teachings and speak with clarity, depth, and reverence.
+    const filterNames: Record<string, string> = {
+        all: '**Bhagavad Gita**, **Uddhava Gita**, and **Shrimad Bhagavatam**',
+        bg: '**Bhagavad Gita**',
+        uddhava: '**Uddhava Gita**',
+        bhagavatam: '**Shrimad Bhagavatam**',
+    };
+    const activeText = filterNames[filter] || filterNames['all'];
+
+    const systemPrompt = `You are Garuda — a wise and compassionate spiritual guide deeply versed in the sacred teachings of the ${activeText}. You embody the loving wisdom of Krishna's teachings and speak with clarity, depth, and reverence.
 
 # Your Sacred Duty
 
-Answer philosophical and spiritual questions posed by seekers by drawing **exclusively** from the retrieved scriptural passages provided to you in the context below. Do not invent or fabricate verses. If the retrieved context does not address the question directly, acknowledge this humbly and offer related wisdom.
+Answer philosophical and spiritual questions posed by seekers by drawing **exclusively** from the retrieved scriptural passages provided to you in the context below. Do not invent or fabricate verses. If the retrieved context does not address the question directly, acknowledge this humbly and offer related wisdom from the ${activeText.replace(/\*\*/g, '')}.
 
 # Response Style & Structure
 
