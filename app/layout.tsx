@@ -19,6 +19,10 @@ export const metadata: Metadata = {
   title: 'Garuda - Spiritual AI',
   description: 'Wisdom from Bhagavad Gita, Uddhava Gita, and Shrimad Bhagavatam.',
   manifest: '/manifest.json',
+  icons: {
+    icon: '/icon-192.png?v=3',
+    apple: '/icon-512.png?v=3'
+  }
 };
 
 export const viewport: Viewport = {
