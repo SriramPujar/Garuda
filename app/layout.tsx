@@ -2,6 +2,7 @@ import type { Metadata, Viewport } from 'next';
 import { Outfit, Playfair_Display } from 'next/font/google';
 import './globals.css';
 import SessionProviderWrapper from './components/SessionProviderWrapper';
+import { Analytics } from '@vercel/analytics/next';
 
 const outfit = Outfit({
   subsets: ['latin'],
@@ -44,6 +45,7 @@ export default function RootLayout({
         <SessionProviderWrapper>
           {children}
         </SessionProviderWrapper>
+        <Analytics />
       </body>
     </html>
   );
