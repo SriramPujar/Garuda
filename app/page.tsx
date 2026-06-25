@@ -53,6 +53,28 @@ export default function Chat() {
     const [isSidebarOpen, setIsSidebarOpen] = useState(false);
     const [activeFilter, setActiveFilter] = useState('all');
 
+    // Generative AI content reporting states (Policy 11.16)
+    const [reportingMessage, setReportingMessage] = useState<{ id: string; content: string } | null>(null);
+    const [reportReason, setReportReason] = useState('inappropriate');
+    const [reportDetails, setReportDetails] = useState('');
+
+    const handleReportClick = (id: string, content: string) => {
+        setReportingMessage({ id, content });
+    };
+
+    const submitReport = () => {
+        console.log('Report submitted:', {
+            messageId: reportingMessage?.id,
+            content: reportingMessage?.content,
+            reason: reportReason,
+            details: reportDetails
+        });
+        alert('Thank you! Your report has been submitted. We will review this response.');
+        setReportingMessage(null);
+        setReportDetails('');
+        setReportReason('inappropriate');
+    };
+
     const messagesEndRef = useRef<HTMLDivElement>(null);
 
     const scrollToBottom = () => {
@@ -485,16 +507,29 @@ export default function Chat() {
                                 }}
                             />
                             {m.role === 'assistant' && !isLoading && (
-                                <button
-                                    onClick={() => speak(m.content)}
-                                    style={{
-                                        position: 'absolute', bottom: '-20px', left: '0',
-                                        background: 'transparent', border: 'none', color: 'var(--color-text-secondary)',
-                                        fontSize: '0.8rem', cursor: 'pointer', opacity: 0.7
-                                    }}
-                                >
-                                    🔊 Listen
-                                </button>
+                                <div style={{
+                                    position: 'absolute', bottom: '-20px', left: '0',
+                                    display: 'flex', gap: '16px', alignItems: 'center'
+                                }}>
+                                    <button
+                                        onClick={() => speak(m.content)}
+                                        style={{
+                                            background: 'transparent', border: 'none', color: 'var(--color-text-secondary)',
+                                            fontSize: '0.8rem', cursor: 'pointer', opacity: 0.7
+                                        }}
+                                    >
+                                        🔊 Listen
+                                    </button>
+                                    <button
+                                        onClick={() => handleReportClick(m.id, m.content)}
+                                        style={{
+                                            background: 'transparent', border: 'none', color: 'var(--color-text-secondary)',
+                                            fontSize: '0.8rem', cursor: 'pointer', opacity: 0.7
+                                        }}
+                                    >
+                                        🚩 Report Issue
+                                    </button>
+                                </div>
                             )}
                         </div>
                     ))
@@ -556,6 +591,107 @@ export default function Chat() {
                     </button>
                 </form>
             </div>
+
+            {reportingMessage && (
+                <div style={{
+                    position: 'fixed',
+                    top: 0,
+                    left: 0,
+                    width: '100vw',
+                    height: '100vh',
+                    backgroundColor: 'rgba(0,0,0,0.65)',
+                    display: 'flex',
+                    alignItems: 'center',
+                    justifyContent: 'center',
+                    zIndex: 2000,
+                    backdropFilter: 'blur(4px)'
+                }}>
+                    <div style={{
+                        background: '#1a1a1a', // standard dark bg
+                        border: '1px solid rgba(212, 175, 55, 0.3)',
+                        borderRadius: '16px',
+                        padding: '2rem',
+                        width: '90%',
+                        maxWidth: '450px',
+                        color: '#f0f0f0',
+                        boxShadow: '0 20px 40px rgba(0,0,0,0.5)'
+                    }}>
+                        <h3 style={{ fontFamily: 'var(--font-serif)', color: 'var(--color-saffron-500)', fontSize: '1.25rem', marginBottom: '1rem', marginTop: 0 }}>🚩 Report AI Response</h3>
+                        <p style={{ fontSize: '0.88rem', opacity: 0.8, marginBottom: '1.25rem', lineHeight: '1.4' }}>Help us maintain scriptural accuracy and safety. Please specify the issue with this AI-generated response:</p>
+                        
+                        <div style={{ display: 'flex', flexDirection: 'column', gap: '0.65rem', marginBottom: '1.25rem' }}>
+                            <label style={{ display: 'flex', alignItems: 'center', gap: '0.6rem', fontSize: '0.9rem', cursor: 'pointer' }}>
+                                <input type="radio" name="reason" value="inappropriate" checked={reportReason === 'inappropriate'} onChange={(e) => setReportReason(e.target.value)} />
+                                Inappropriate or offensive language
+                            </label>
+                            <label style={{ display: 'flex', alignItems: 'center', gap: '0.6rem', fontSize: '0.9rem', cursor: 'pointer' }}>
+                                <input type="radio" name="reason" value="harmful" checked={reportReason === 'harmful'} onChange={(e) => setReportReason(e.target.value)} />
+                                Harmful or dangerous guidance
+                            </label>
+                            <label style={{ display: 'flex', alignItems: 'center', gap: '0.6rem', fontSize: '0.9rem', cursor: 'pointer' }}>
+                                <input type="radio" name="reason" value="inaccurate" checked={reportReason === 'inaccurate'} onChange={(e) => setReportReason(e.target.value)} />
+                                Scripturally inaccurate or misleading
+                            </label>
+                            <label style={{ display: 'flex', alignItems: 'center', gap: '0.6rem', fontSize: '0.9rem', cursor: 'pointer' }}>
+                                <input type="radio" name="reason" value="other" checked={reportReason === 'other'} onChange={(e) => setReportReason(e.target.value)} />
+                                Other issue
+                            </label>
+                        </div>
+
+                        <textarea
+                            value={reportDetails}
+                            onChange={(e) => setReportDetails(e.target.value)}
+                            placeholder="Additional details (optional)..."
+                            style={{
+                                width: '100%',
+                                height: '80px',
+                                background: 'rgba(255,255,255,0.03)',
+                                border: '1px solid rgba(255,255,255,0.1)',
+                                borderRadius: '8px',
+                                padding: '0.75rem',
+                                color: '#f0f0f0',
+                                fontSize: '0.9rem',
+                                resize: 'none',
+                                marginBottom: '1.5rem',
+                                outline: 'none'
+                            }}
+                        />
+
+                        <div style={{ display: 'flex', justifyContent: 'flex-end', gap: '1rem' }}>
+                            <button
+                                onClick={() => {
+                                    setReportingMessage(null);
+                                    setReportDetails('');
+                                }}
+                                style={{
+                                    background: 'transparent',
+                                    border: '1px solid rgba(255,255,255,0.15)',
+                                    borderRadius: '8px',
+                                    padding: '0.5rem 1rem',
+                                    color: '#f0f0f0',
+                                    cursor: 'pointer'
+                                }}
+                            >
+                                Cancel
+                            </button>
+                            <button
+                                onClick={submitReport}
+                                style={{
+                                    background: 'linear-gradient(135deg, var(--color-saffron-500), var(--color-saffron-700))',
+                                    border: 'none',
+                                    borderRadius: '8px',
+                                    padding: '0.5rem 1.25rem',
+                                    color: '#1a1a1a',
+                                    fontWeight: 'bold',
+                                    cursor: 'pointer'
+                                }}
+                            >
+                                Submit Report
+                            </button>
+                        </div>
+                    </div>
+                </div>
+            )}
         </div>
     );
 }

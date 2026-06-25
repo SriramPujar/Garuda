@@ -24,13 +24,30 @@
       "electron/**/*",
       "package.json"
     ],
-    "asar": false,
+    "asar": true,
     "directories": {
       "output": "garuda_dist"
     },
     "win": {
       "icon": "electron/icon.png",
-      "target": "nsis"
+      "target": [
+        "appx"
+      ],
+      "signtoolOptions": {
+        "sign": "./scripts/customSign.js"
+      }
+    },
+    "appx": {
+      "displayName": "Garuda AI",
+      "identityName": "Sriram214.GarudaAI",
+      "publisher": "CN=1C096510-B4AF-4082-BCF3-CB710DB21C4E",
+      "publisherDisplayName": "Sriram214",
+      "languages": [
+        "en-US"
+      ],
+      "capabilities": [
+        "runFullTrust"
+      ]
     }
   },
   "dependencies": {

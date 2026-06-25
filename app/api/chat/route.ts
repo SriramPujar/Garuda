@@ -70,7 +70,7 @@ import fs from 'fs';
 import path from 'path';
 import prisma from '@/lib/prisma';
 import { getServerSession } from 'next-auth';
-import { authOptions } from '../auth/[...nextauth]/route';
+import { authOptions } from '@/lib/auth';
 
 let cachedVectorStore: any = null;
 
