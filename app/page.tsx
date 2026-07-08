@@ -428,14 +428,7 @@ export default function Chat() {
                 <div className="sidebar-footer">
                     <div className="sidebar-footer-divider" />
 
-                    {/* Install App — always visible */}
-                    <button
-                        onClick={handleInstallClick}
-                        className="sidebar-footer-btn install-btn"
-                    >
-                        <span>📱</span>
-                        <span>{isNative ? 'App Installed ✓' : 'Install App'}</span>
-                    </button>
+
 
                     {/* Sign Out row */}
                     <button
