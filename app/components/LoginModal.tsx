@@ -1,5 +1,6 @@
 import { useState } from 'react';
 import { signIn } from 'next-auth/react';
+import styles from '../page.module.css';
 
 export default function LoginModal() {
   const [isLogin, setIsLogin] = useState(true);
@@ -24,11 +25,9 @@ export default function LoginModal() {
         setError(res.error);
         setLoading(false);
       } else {
-        // Will trigger a reactive re-render through SessionProvider
         window.location.reload();
       }
     } else {
-      // Registration
       try {
         const res = await fetch('/api/auth/register', {
           method: 'POST',
@@ -41,7 +40,6 @@ export default function LoginModal() {
           throw new Error(data.message || 'Registration failed');
         }
 
-        // Auto-login after registration
         const loginRes = await signIn('credentials', {
           redirect: false,
           username,
@@ -62,21 +60,10 @@ export default function LoginModal() {
   };
 
   return (
-    <div style={{
-      position: 'fixed', top: 0, left: 0, width: '100vw', height: '100vh',
-      background: 'rgba(0,0,0,0.7)', backdropFilter: 'blur(10px)',
-      display: 'flex', alignItems: 'center', justifyContent: 'center', zIndex: 1000,
-      padding: '1rem'
-    }}>
-      <div style={{
-        background: 'var(--bg-secondary)', border: '1px solid rgba(212, 175, 55, 0.3)',
-        borderRadius: '12px', padding: '2rem', maxWidth: '400px', width: '100%',
-        boxShadow: '0 10px 30px rgba(0,0,0,0.5), inset 0 1px 0 rgba(255,255,255,0.1)',
-        display: 'flex', flexDirection: 'column', gap: '1.5rem',
-        animation: 'fadeIn 0.3s ease-out'
-      }}>
+    <div className={styles.modalOverlay}>
+      <div className={styles.modalCard}>
         <div style={{ textAlign: 'center' }}>
-          <div style={{ fontSize: '2rem', marginBottom: '0.5rem' }}>ॐ</div>
+          <div style={{ fontSize: '2rem', marginBottom: '0.5rem', color: 'var(--color-saffron-500)', textShadow: '0 0 10px rgba(212, 175, 55, 0.3)' }}>ॐ</div>
           <h2 style={{ fontFamily: 'var(--font-serif)', color: 'var(--color-saffron-500)' }}>
             {isLogin ? 'Enter the Sanctuary' : 'Begin Your Journey'}
           </h2>
@@ -86,12 +73,12 @@ export default function LoginModal() {
         </div>
 
         {error && (
-          <div style={{ padding: '0.75rem', background: 'rgba(255, 80, 80, 0.1)', color: '#ff6b6b', borderRadius: '6px', fontSize: '0.85rem', textAlign: 'center', border: '1px solid rgba(255, 80, 80, 0.2)' }}>
+          <div className={styles.modalError}>
             {error}
           </div>
         )}
 
-        <form onSubmit={handleSubmit} style={{ display: 'flex', flexDirection: 'column', gap: '1rem' }}>
+        <form onSubmit={handleSubmit} style={{ display: 'flex', flexDirection: 'column', gap: '1.25rem' }}>
           <div>
             <input
               type="text"
@@ -99,12 +86,7 @@ export default function LoginModal() {
               value={username}
               onChange={(e) => setUsername(e.target.value)}
               required
-              style={{
-                width: '100%', padding: '0.75rem', borderRadius: '6px',
-                background: 'rgba(255,255,255,0.05)', border: '1px solid rgba(255,255,255,0.1)',
-                color: 'var(--color-text-primary)', outline: 'none',
-                fontFamily: 'var(--font-sans)'
-              }}
+              className={styles.modalInput}
             />
           </div>
           <div>
@@ -115,47 +97,28 @@ export default function LoginModal() {
               onChange={(e) => setPassword(e.target.value)}
               required
               minLength={6}
-              style={{
-                width: '100%', padding: '0.75rem', borderRadius: '6px',
-                background: 'rgba(255,255,255,0.05)', border: '1px solid rgba(255,255,255,0.1)',
-                color: 'var(--color-text-primary)', outline: 'none',
-                fontFamily: 'var(--font-sans)'
-              }}
+              className={styles.modalInput}
             />
           </div>
           <button
             type="submit"
             disabled={loading}
-            style={{
-              padding: '0.75rem', background: 'linear-gradient(135deg, var(--color-saffron-500), var(--color-saffron-700))',
-              color: 'var(--bg-primary)', border: 'none', borderRadius: '6px', fontWeight: 'bold',
-              cursor: loading ? 'not-allowed' : 'pointer', opacity: loading ? 0.7 : 1, marginTop: '0.5rem',
-              transition: 'opacity 0.2s', fontFamily: 'var(--font-serif)', letterSpacing: '1px'
-            }}
+            className={styles.modalSubmitBtn}
           >
             {loading ? 'Communing...' : (isLogin ? 'Sign In' : 'Sign Up')}
           </button>
         </form>
 
-        <div style={{ textAlign: 'center', marginTop: '0.5rem' }}>
+        <div style={{ textAlign: 'center', marginTop: '0.25rem' }}>
           <button
             type="button"
             onClick={() => { setIsLogin(!isLogin); setError(''); }}
-            style={{
-              background: 'none', border: 'none', color: 'var(--color-text-secondary)',
-              cursor: 'pointer', fontSize: '0.85rem', textDecoration: 'underline'
-            }}
+            className={styles.modalLinkBtn}
           >
             {isLogin ? "New seeker? Sign up here" : "Already a devotee? Sign in here"}
           </button>
         </div>
       </div>
-      <style dangerouslySetInnerHTML={{__html: `
-        @keyframes fadeIn {
-          from { opacity: 0; transform: scale(0.95) translateY(10px); }
-          to { opacity: 1; transform: scale(1) translateY(0); }
-        }
-      `}} />
     </div>
   );
 }

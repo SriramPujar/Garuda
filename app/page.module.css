@@ -107,16 +107,17 @@
     width: 100%;
     max-width: 800px;
     border-radius: 100px;
-    background-color: rgba(255, 255, 255, 0.03);
-    transition: all 0.4s ease;
-    box-shadow: 0 8px 32px 0 rgba(0, 0, 0, 0.2);
+    background-color: rgba(255, 255, 255, 0.02);
+    transition: all 0.4s cubic-bezier(0.16, 1, 0.3, 1);
+    box-shadow: 0 8px 32px 0 rgba(0, 0, 0, 0.25);
     border: 1px solid rgba(255, 255, 255, 0.05);
 }
 
 .form:focus-within {
-    background-color: rgba(255, 255, 255, 0.05);
-    border-color: rgba(212, 175, 55, 0.3);
-    box-shadow: 0 8px 32px 0 rgba(212, 175, 55, 0.05);
+    background-color: rgba(255, 255, 255, 0.04);
+    border-color: rgba(212, 175, 55, 0.35);
+    box-shadow: 0 8px 32px 0 rgba(0, 0, 0, 0.25), 0 0 15px rgba(212, 175, 55, 0.15);
+    transform: translateY(-1px);
 }
 
 .input {
@@ -127,6 +128,7 @@
     color: var(--color-text-primary);
     font-size: 1.05rem;
     font-family: var(--font-sans);
+    transition: all 0.3s cubic-bezier(0.16, 1, 0.3, 1);
 }
 
 .input:focus {
@@ -152,19 +154,24 @@
     display: flex;
     align-items: center;
     justify-content: center;
-    transition: all 0.3s cubic-bezier(0.175, 0.885, 0.32, 1.275);
-    box-shadow: 0 4px 15px rgba(212, 175, 55, 0.3);
+    transition: all 0.3s cubic-bezier(0.16, 1, 0.3, 1);
+    box-shadow: 0 4px 12px rgba(212, 175, 55, 0.2);
 }
 
 .sendButton:hover:not(:disabled) {
-    transform: translateY(-50%) scale(1.1);
-    box-shadow: 0 6px 20px rgba(212, 175, 55, 0.5);
+    transform: translateY(-50%) scale(1.05);
+    box-shadow: 0 6px 16px rgba(212, 175, 55, 0.35);
+    background: linear-gradient(135deg, #E5C158, var(--color-saffron-700));
+}
+
+.sendButton:active:not(:disabled) {
+    transform: translateY(-50%) scale(0.95);
 }
 
 .sendButton:disabled {
-    background: rgba(255, 255, 255, 0.1);
+    background: rgba(255, 255, 255, 0.08);
     box-shadow: none;
-    color: rgba(255, 255, 255, 0.3);
+    color: rgba(255, 255, 255, 0.2);
     cursor: not-allowed;
     transform: translateY(-50%) scale(1);
 }
@@ -275,31 +282,36 @@
     display: inline-flex;
     align-items: center;
     gap: 0.3rem;
-    padding: 0.3rem 0.85rem;
+    padding: 0.4rem 0.95rem;
     border-radius: 20px;
     font-size: 0.75rem;
     font-family: var(--font-sans, sans-serif);
     font-weight: 500;
     letter-spacing: 0.04em;
     cursor: pointer;
-    border: 1px solid rgba(255, 255, 255, 0.1);
-    background: rgba(255, 255, 255, 0.04);
+    border: 1px solid rgba(255, 255, 255, 0.08);
+    background: rgba(255, 255, 255, 0.03);
     color: var(--color-text-secondary);
-    transition: all 0.25s ease;
+    transition: all 0.3s cubic-bezier(0.16, 1, 0.3, 1);
     user-select: none;
 }
 
 .filterChip:hover {
     border-color: rgba(212, 175, 55, 0.4);
     color: var(--color-saffron-500);
-    background: rgba(212, 175, 55, 0.07);
+    background: rgba(212, 175, 55, 0.08);
+    transform: translateY(-1px);
+}
+
+.filterChip:active {
+    transform: translateY(0);
 }
 
 .filterChipActive {
-    border-color: rgba(212, 175, 55, 0.6) !important;
+    border-color: rgba(212, 175, 55, 0.5) !important;
     background: linear-gradient(135deg, rgba(212, 175, 55, 0.15), rgba(212, 175, 55, 0.06)) !important;
     color: var(--color-saffron-500) !important;
-    box-shadow: 0 0 10px rgba(212, 175, 55, 0.2);
+    box-shadow: 0 4px 12px rgba(212, 175, 55, 0.15) !important;
 }
 
 /* ── Contemplating Animation ────────────────────── */
@@ -370,4 +382,181 @@
 @keyframes pulseGlow {
     0%, 100% { opacity: 0.5; box-shadow: none; }
     50% { opacity: 1; box-shadow: 0 0 8px rgba(212, 175, 55, 0.3); }
+}
+
+/* ── Custom Theme Toggle Button ────────────────── */
+.themeToggle {
+    width: 40px;
+    height: 40px;
+    flex-shrink: 0;
+    background: rgba(255, 255, 255, 0.04);
+    border: 1px solid rgba(255, 255, 255, 0.08);
+    border-radius: 50%;
+    color: var(--color-saffron-500);
+    cursor: pointer;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    transition: all 0.3s cubic-bezier(0.16, 1, 0.3, 1);
+    font-size: 1.1rem;
+}
+.themeToggle:hover {
+    background: rgba(212, 175, 55, 0.08);
+    border-color: rgba(212, 175, 55, 0.4);
+    transform: rotate(15deg) scale(1.05);
+    box-shadow: 0 0 12px rgba(212, 175, 55, 0.2);
+}
+.themeToggle:active {
+    transform: scale(0.95);
+}
+
+/* ── Daily Quote Card ───────────────────────────── */
+.quoteCard {
+    text-align: center;
+    padding: 1.5rem 2rem;
+    margin: 1.5rem auto;
+    max-width: 600px;
+    background-color: rgba(255, 255, 255, 0.02);
+    border: 1px solid rgba(212, 175, 55, 0.15);
+    border-radius: 16px;
+    box-shadow: 0 8px 32px 0 rgba(0, 0, 0, 0.25);
+    backdrop-filter: blur(12px);
+    transition: all 0.4s cubic-bezier(0.16, 1, 0.3, 1);
+    animation: fadeUpReveal 1.2s cubic-bezier(0.16, 1, 0.3, 1) forwards;
+}
+.quoteCard:hover {
+    transform: translateY(-2px);
+    border-color: rgba(212, 175, 55, 0.35);
+    box-shadow: 0 12px 40px 0 rgba(0, 0, 0, 0.35), 0 0 15px rgba(212, 175, 55, 0.08);
+    background-color: rgba(255, 255, 255, 0.03);
+}
+.quoteText {
+    font-family: var(--font-serif);
+    color: var(--color-text-primary);
+    font-size: 1.15rem;
+    font-style: italic;
+    line-height: 1.6;
+    margin-bottom: 0.75rem;
+    letter-spacing: 0.02em;
+    text-shadow: 0 2px 10px rgba(0, 0, 0, 0.5);
+}
+.quoteSource {
+    font-size: 0.85rem;
+    color: var(--color-saffron-500);
+    letter-spacing: 0.1em;
+    text-transform: uppercase;
+    opacity: 0.9;
+}
+
+/* ── Login Modal Styles ────────────────────────── */
+.modalOverlay {
+    position: fixed;
+    top: 0;
+    left: 0;
+    width: 100vw;
+    height: 100vh;
+    background: rgba(0, 0, 0, 0.7);
+    backdrop-filter: blur(12px);
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    z-index: 1000;
+    padding: 1rem;
+    animation: fadeIn 0.4s ease-out;
+}
+
+.modalCard {
+    background: var(--bg-secondary);
+    border: 1px solid rgba(212, 175, 55, 0.25);
+    border-radius: 16px;
+    padding: 2rem;
+    max-width: 400px;
+    width: 100%;
+    box-shadow: 0 10px 40px rgba(0, 0, 0, 0.5), inset 0 1px 0 rgba(255, 255, 255, 0.05);
+    display: flex;
+    flex-direction: column;
+    gap: 1.5rem;
+    animation: slideUpScale 0.4s cubic-bezier(0.16, 1, 0.3, 1) forwards;
+}
+
+.modalInput {
+    width: 100%;
+    padding: 0.8rem 1rem;
+    border-radius: 8px;
+    background: rgba(255, 255, 255, 0.03);
+    border: 1px solid rgba(255, 255, 255, 0.08);
+    color: var(--color-text-primary);
+    outline: none;
+    font-family: var(--font-sans);
+    transition: all 0.3s cubic-bezier(0.16, 1, 0.3, 1);
+}
+
+.modalInput:focus {
+    background: rgba(255, 255, 255, 0.05);
+    border-color: rgba(212, 175, 55, 0.4);
+    box-shadow: 0 0 12px rgba(212, 175, 55, 0.15);
+}
+
+.modalSubmitBtn {
+    padding: 0.8rem;
+    background: linear-gradient(135deg, var(--color-saffron-500), var(--color-saffron-700));
+    color: var(--bg-primary);
+    border: none;
+    border-radius: 8px;
+    font-weight: bold;
+    cursor: pointer;
+    font-family: var(--font-serif);
+    letter-spacing: 1px;
+    transition: all 0.3s cubic-bezier(0.16, 1, 0.3, 1);
+    box-shadow: 0 4px 12px rgba(212, 175, 55, 0.2);
+}
+
+.modalSubmitBtn:hover:not(:disabled) {
+    transform: translateY(-1px);
+    box-shadow: 0 6px 16px rgba(212, 175, 55, 0.35);
+    background: linear-gradient(135deg, #E5C158, var(--color-saffron-700));
+}
+
+.modalSubmitBtn:active:not(:disabled) {
+    transform: translateY(0);
+}
+
+.modalSubmitBtn:disabled {
+    opacity: 0.6;
+    cursor: not-allowed;
+}
+
+.modalLinkBtn {
+    background: none;
+    border: none;
+    color: var(--color-text-secondary);
+    cursor: pointer;
+    font-size: 0.85rem;
+    text-decoration: underline;
+    transition: color 0.2s ease;
+}
+
+.modalLinkBtn:hover {
+    color: var(--color-saffron-500);
+}
+
+.modalError {
+    padding: 0.75rem;
+    background: rgba(255, 80, 80, 0.15);
+    color: #ff6b6b;
+    border-radius: 8px;
+    border: 1px solid rgba(255, 80, 80, 0.2);
+    font-size: 0.85rem;
+    text-align: center;
+}
+
+@keyframes slideUpScale {
+    from {
+        opacity: 0;
+        transform: scale(0.96) translateY(15px);
+    }
+    to {
+        opacity: 1;
+        transform: scale(1) translateY(0);
+    }
 }

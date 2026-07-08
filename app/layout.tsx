@@ -1,17 +1,11 @@
 import type { Metadata, Viewport } from 'next';
-import { Outfit, Playfair_Display } from 'next/font/google';
+import { Lora } from 'next/font/google';
 import './globals.css';
 import SessionProviderWrapper from './components/SessionProviderWrapper';
 
-const outfit = Outfit({
+const lora = Lora({
   subsets: ['latin'],
-  variable: '--font-sans',
-  display: 'swap',
-});
-
-const playfair = Playfair_Display({
-  subsets: ['latin'],
-  variable: '--font-serif',
+  variable: '--font-lora',
   display: 'swap',
 });
 
@@ -39,7 +33,7 @@ export default function RootLayout({
   children: React.ReactNode;
 }) {
   return (
-    <html lang="en" className={`${outfit.variable} ${playfair.variable}`}>
+    <html lang="en" className={`${lora.variable}`}>
       <body>
         <SessionProviderWrapper>
           {children}

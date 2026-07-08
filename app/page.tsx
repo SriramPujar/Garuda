@@ -472,7 +472,7 @@ export default function Chat() {
                     </div>
 
                     <div style={{ display: 'flex', gap: '0.75rem', width: 'auto', minWidth: '40px', justifyContent: 'flex-end', alignItems: 'center' }} suppressHydrationWarning>
-                        <button onClick={toggleTheme} style={{ width: '40px', height: '40px', flexShrink: 0, background: 'rgba(255,255,255,0.05)', border: '1px solid rgba(255,255,255,0.1)', borderRadius: '50%', color: 'var(--color-saffron-500)', cursor: 'pointer', transition: 'all 0.3s ease' }} title="Toggle Theme" suppressHydrationWarning>
+                        <button onClick={toggleTheme} className={styles.themeToggle} title="Toggle Theme" suppressHydrationWarning>
                             {theme === 'dharma' ? '🌙' : '🌿'}
                         </button>
                     </div>
