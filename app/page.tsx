@@ -5,6 +5,7 @@ import { useSession, signOut } from 'next-auth/react';
 import styles from './page.module.css';
 import DailyQuote from './components/DailyQuote';
 import LoginModal from './components/LoginModal';
+import ConfirmModal from './components/ConfirmModal';
 import { Capacitor } from '@capacitor/core';
 
 // Map raw PDF filenames → beautiful display names
@@ -46,6 +47,15 @@ export default function Chat() {
     const [isInitialized, setIsInitialized] = useState(false);
     const [deferredPrompt, setDeferredPrompt] = useState<any>(null);
     const [isNative, setIsNative] = useState(false);
+    const [confirmModal, setConfirmModal] = useState<{
+        isOpen: boolean;
+        message: string;
+        onConfirm: () => void;
+    }>({
+        isOpen: false,
+        message: '',
+        onConfirm: () => {}
+    });
 
     const [input, setInput] = useState('');
     const [isLoading, setIsLoading] = useState(false);
@@ -204,36 +214,46 @@ export default function Chat() {
         const session = sessions.find(s => s.id === sessionId);
         const title = session ? `"${session.title}"` : "this chat";
         
-        if (window.confirm(`Are you sure you want to permanently delete ${title}? This action cannot be undone.`)) {
-            // Optimistic UI
-            setSessions(prev => prev.filter(s => s.id !== sessionId));
-            if (currentSessionId === sessionId) {
-                setCurrentSessionId(null);
-                setMessages([]);
-            }
+        setConfirmModal({
+            isOpen: true,
+            message: `Are you sure you want to permanently delete ${title}? This action cannot be undone.`,
+            onConfirm: async () => {
+                // Optimistic UI
+                setSessions(prev => prev.filter(s => s.id !== sessionId));
+                if (currentSessionId === sessionId) {
+                    setCurrentSessionId(null);
+                    setMessages([]);
+                }
+                setConfirmModal(prev => ({ ...prev, isOpen: false }));
 
-            // Delete from server
-            try {
-                await fetch(`/api/sessions/${sessionId}`, { method: 'DELETE' });
-            } catch (e) {
-                console.error('Failed to delete', e);
+                // Delete from server
+                try {
+                    await fetch(`/api/sessions/${sessionId}`, { method: 'DELETE' });
+                } catch (e) {
+                    console.error('Failed to delete', e);
+                }
             }
-        }
+        });
     };
 
     const deleteAllSessions = async () => {
-        if (window.confirm("Are you sure you want to permanently delete ALL historical chats? This action is irreversible.")) {
-            const sessionsToDelete = [...sessions];
-            setSessions([]);
-            setCurrentSessionId(null);
-            setMessages([]);
-            setIsSidebarOpen(false);
-            
-            // Delete all individually
-            for (const s of sessionsToDelete) {
-                await fetch(`/api/sessions/${s.id}`, { method: 'DELETE' });
+        setConfirmModal({
+            isOpen: true,
+            message: "Are you sure you want to permanently delete ALL historical chats? This action is irreversible.",
+            onConfirm: async () => {
+                const sessionsToDelete = [...sessions];
+                setSessions([]);
+                setCurrentSessionId(null);
+                setMessages([]);
+                setIsSidebarOpen(false);
+                setConfirmModal(prev => ({ ...prev, isOpen: false }));
+                
+                // Delete all individually
+                for (const s of sessionsToDelete) {
+                    await fetch(`/api/sessions/${s.id}`, { method: 'DELETE' });
+                }
             }
-        }
+        });
     };
 
     const updateCurrentSession = (updatedMessages: Message[], sessionId: string) => {
@@ -689,6 +709,14 @@ export default function Chat() {
                     </div>
                 </div>
             )}
+
+            {/* Custom Confirm Modal */}
+            <ConfirmModal
+                isOpen={confirmModal.isOpen}
+                message={confirmModal.message}
+                onConfirm={confirmModal.onConfirm}
+                onCancel={() => setConfirmModal(prev => ({ ...prev, isOpen: false }))}
+            />
         </div>
     );
 }
