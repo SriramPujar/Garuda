@@ -385,7 +385,7 @@ export default function Chat() {
         <div className={styles.container}>
             {/* Sidebar Toggle (Mobile) */}
             <button className="sidebar-toggle" onClick={toggleSidebar}>
-                <span style={{ fontSize: '1.2rem' }}>☰</span>
+                <span style={{ fontSize: '1.2rem' }}>{isSidebarOpen ? '✕' : '☰'}</span>
             </button>
 
             {/* Overlay */}
@@ -398,8 +398,7 @@ export default function Chat() {
                 </button>
                 {sessions.length > 0 && (
                     <button 
-                        className="new-chat-btn" 
-                        style={{background: 'rgba(255, 80, 80, 0.1)', color: '#ff6b6b', marginTop: '-0.5rem', marginBottom: '1rem', border: '1px solid rgba(255, 80, 80, 0.2)'}} 
+                        className="delete-all-btn" 
                         onClick={deleteAllSessions}
                     >
                         🗑 Delete All Chats
