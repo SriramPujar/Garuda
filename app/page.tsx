@@ -201,23 +201,28 @@ export default function Chat() {
     const deleteSession = async (e: React.MouseEvent, sessionId: string) => {
         e.stopPropagation(); // Don't trigger selectSession
         
-        // Optimistic UI
-        setSessions(prev => prev.filter(s => s.id !== sessionId));
-        if (currentSessionId === sessionId) {
-            setCurrentSessionId(null);
-            setMessages([]);
-        }
+        const session = sessions.find(s => s.id === sessionId);
+        const title = session ? `"${session.title}"` : "this chat";
+        
+        if (window.confirm(`Are you sure you want to permanently delete ${title}? This action cannot be undone.`)) {
+            // Optimistic UI
+            setSessions(prev => prev.filter(s => s.id !== sessionId));
+            if (currentSessionId === sessionId) {
+                setCurrentSessionId(null);
+                setMessages([]);
+            }
 
-        // Delete from server
-        try {
-            await fetch(`/api/sessions/${sessionId}`, { method: 'DELETE' });
-        } catch (e) {
-            console.error('Failed to delete', e);
+            // Delete from server
+            try {
+                await fetch(`/api/sessions/${sessionId}`, { method: 'DELETE' });
+            } catch (e) {
+                console.error('Failed to delete', e);
+            }
         }
     };
 
     const deleteAllSessions = async () => {
-        if (window.confirm("Are you sure you want to delete all historical chats?")) {
+        if (window.confirm("Are you sure you want to permanently delete ALL historical chats? This action is irreversible.")) {
             const sessionsToDelete = [...sessions];
             setSessions([]);
             setCurrentSessionId(null);

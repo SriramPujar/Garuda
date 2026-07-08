@@ -197,7 +197,7 @@ h6 {
   font-size: 1.1rem;
   padding: 0.5rem;
   border-radius: 6px;
-  opacity: 0;
+  opacity: 0.45; /* Softly visible on mobile/default states for usability */
   transition: all 0.3s cubic-bezier(0.16, 1, 0.3, 1);
   line-height: 1;
   display: flex;
@@ -205,26 +205,25 @@ h6 {
   justify-content: center;
 }
 
-.session-item:hover .session-delete-btn,
-.session-delete-btn:hover {
-  opacity: 0.7;
+.session-item:hover .session-delete-btn {
+  opacity: 0.85;
 }
 
 .session-delete-btn:hover {
   opacity: 1 !important;
   background: rgba(255, 80, 80, 0.15);
   color: #ff6b6b;
-  transform: scale(1.05);
+  transform: scale(1.1);
 }
 
 .session-item:hover {
   background: rgba(255, 255, 255, 0.08);
-  border-color: rgba(212, 175, 55, 0.4);
-  transform: translateX(4px);
+  border-color: rgba(212, 175, 55, 0.3);
+  transform: translateX(2px);
 }
 
 .session-item.active {
-  background: var(--bg-msg-user);
+  background: rgba(212, 175, 55, 0.08); /* Unified saffron tint background */
   border-color: var(--color-saffron-500);
   box-shadow: 0 4px 12px rgba(212, 175, 55, 0.1);
 }
