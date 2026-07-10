@@ -7,6 +7,7 @@ import LoginModal from './components/LoginModal';
 import ConfirmModal from './components/ConfirmModal';
 import MoodGuidance from './components/MoodGuidance';
 import VedicQuiz from './components/VedicQuiz';
+import ScriptureStudy from './components/ScriptureStudy';
 import { Capacitor } from '@capacitor/core';
 
 // Map raw PDF filenames → beautiful display names
@@ -71,7 +72,8 @@ export default function Chat() {
     const [isSidebarOpen, setIsSidebarOpen] = useState(false);
     const [activeFilter, setActiveFilter] = useState('all');
     const [tone, setTone] = useState<'beginner' | 'traditional' | 'modern'>('traditional');
-    const [activeTab, setActiveTab] = useState<'chat' | 'quiz'>('chat');
+    const [activeTab, setActiveTab] = useState<'chat' | 'quiz' | 'study'>('chat');
+    const [selectedStudyScripture, setSelectedStudyScripture] = useState<'bg' | 'uddhava' | 'bhagavatam'>('bg');
 
     // Generative AI content reporting states (Policy 11.16)
     const [reportingMessage, setReportingMessage] = useState<{ id: string; content: string } | null>(null);
@@ -419,6 +421,12 @@ export default function Chat() {
         sendCustomPrompt(prompt);
     };
 
+    const handleStudyDiscuss = (verseText: string, citation: string) => {
+        setActiveTab('chat');
+        const prompt = `Please guide me further on this verse from the ${citation}:\n\n"${verseText}"`;
+        sendCustomPrompt(prompt);
+    };
+
     if (status === 'loading') {
         return <div style={{ height: '100vh', display: 'flex', alignItems: 'center', justifyContent: 'center', background: 'var(--bg-primary)', color: 'var(--color-saffron-500)' }}><h3 style={{fontFamily: 'var(--font-serif)'}}>Communing...</h3></div>;
     }
@@ -463,6 +471,28 @@ export default function Chat() {
                         onClick={() => { setActiveTab('quiz'); setIsSidebarOpen(false); }}
                     >
                         <span>📝</span> Daily Quiz & Prompt
+                    </button>
+                </div>
+
+                <div className="sidebar-section-title">Scripture Course</div>
+                <div className="sidebar-menu">
+                    <button 
+                        className={`sidebar-menu-btn ${activeTab === 'study' && selectedStudyScripture === 'bg' ? 'active' : ''}`}
+                        onClick={() => { setActiveTab('study'); setSelectedStudyScripture('bg'); setIsSidebarOpen(false); }}
+                    >
+                        <span>📖</span> Bhagavad Gita
+                    </button>
+                    <button 
+                        className={`sidebar-menu-btn ${activeTab === 'study' && selectedStudyScripture === 'uddhava' ? 'active' : ''}`}
+                        onClick={() => { setActiveTab('study'); setSelectedStudyScripture('uddhava'); setIsSidebarOpen(false); }}
+                    >
+                        <span>🌺</span> Uddhava Gita
+                    </button>
+                    <button 
+                        className={`sidebar-menu-btn ${activeTab === 'study' && selectedStudyScripture === 'bhagavatam' ? 'active' : ''}`}
+                        onClick={() => { setActiveTab('study'); setSelectedStudyScripture('bhagavatam'); setIsSidebarOpen(false); }}
+                    >
+                        <span>🪷</span> Śrīmad Bhāgavatam
                     </button>
                 </div>
 
@@ -542,6 +572,10 @@ export default function Chat() {
             {activeTab === 'quiz' ? (
                 <div style={{ flexGrow: 1, overflowY: 'auto' }}>
                     <VedicQuiz onSubmitReflection={handleContemplationSubmit} />
+                </div>
+            ) : activeTab === 'study' ? (
+                <div style={{ flexGrow: 1, overflowY: 'auto' }}>
+                    <ScriptureStudy scriptureId={selectedStudyScripture} onAskGaruda={handleStudyDiscuss} />
                 </div>
             ) : (
                 <>
