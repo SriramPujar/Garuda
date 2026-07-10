@@ -3,9 +3,9 @@
 import { useEffect, useRef, useState } from 'react';
 import { useSession, signOut } from 'next-auth/react';
 import styles from './page.module.css';
-import DailyQuote from './components/DailyQuote';
 import LoginModal from './components/LoginModal';
 import ConfirmModal from './components/ConfirmModal';
+import MoodGuidance from './components/MoodGuidance';
 import { Capacitor } from '@capacitor/core';
 
 // Map raw PDF filenames → beautiful display names
@@ -307,14 +307,13 @@ export default function Chat() {
         }
     };
 
-    const handleSubmit = async (e: React.FormEvent) => {
-        e.preventDefault();
-        if (!input.trim() || isLoading) return;
+    const sendCustomPrompt = async (promptText: string) => {
+        if (!promptText.trim() || isLoading) return;
 
         const userMessage: Message = {
             id: Date.now().toString(),
             role: 'user',
-            content: input,
+            content: promptText,
         };
 
         let activeSessionId = currentSessionId;
@@ -327,12 +326,11 @@ export default function Chat() {
         setMessages(newMessages);
         updateCurrentSession(newMessages, activeSessionId); // Save to session immediately
 
-        setInput('');
         setIsLoading(true);
 
         try {
-        // Using relative URL to ensure it works properly locally and on Vercel
-        const response = await fetch('/api/chat', {
+            // Using relative URL to ensure it works properly locally and on Vercel
+            const response = await fetch('/api/chat', {
                 method: 'POST',
                 headers: { 'Content-Type': 'application/json' },
                 body: JSON.stringify({
@@ -355,14 +353,13 @@ export default function Chat() {
             const decoder = new TextDecoder();
 
             const aiMessageId = (Date.now() + 1).toString();
-            // Temporary placeholder for AI message
             const initialAiMessage: Message = { id: aiMessageId, role: 'assistant', content: '' };
 
             const messagesWithAi = [...newMessages, initialAiMessage];
             setMessages(messagesWithAi);
 
             let done = false;
-            let accumuluatedContent = '';
+            let accumulatedContent = '';
 
             while (!done) {
                 const { value, done: doneReading } = await reader.read();
@@ -370,20 +367,18 @@ export default function Chat() {
 
                 if (value) {
                     const chunk = decoder.decode(value, { stream: true });
-                    accumuluatedContent += chunk;
+                    accumulatedContent += chunk;
 
                     const updatedMessagesWithStreaming = messagesWithAi.map(m =>
-                        m.id === aiMessageId ? { ...m, content: accumuluatedContent } : m
+                        m.id === aiMessageId ? { ...m, content: accumulatedContent } : m
                     );
                     setMessages(updatedMessagesWithStreaming);
-                    // Note: We typically don't update session storage on every chunk to save performance,
-                    // but we should update it at the end.
                 }
             }
 
             // Final update to session with complete message
             const finalMessages = messagesWithAi.map(m =>
-                m.id === aiMessageId ? { ...m, content: accumuluatedContent } : m
+                m.id === aiMessageId ? { ...m, content: accumulatedContent } : m
             );
             updateCurrentSession(finalMessages, activeSessionId);
 
@@ -401,6 +396,19 @@ export default function Chat() {
         } finally {
             setIsLoading(false);
         }
+    };
+
+    const handleSubmit = async (e: React.FormEvent) => {
+        e.preventDefault();
+        if (!input.trim() || isLoading) return;
+        const promptText = input;
+        setInput('');
+        await sendCustomPrompt(promptText);
+    };
+
+    const handleSelectVerseForDiscussion = (verseText: string, source: string) => {
+        const prompt = `Please guide me further on this scripture passage from ${prettifySource(source)}: "${verseText}"`;
+        sendCustomPrompt(prompt);
     };
 
     if (status === 'loading') {
@@ -508,7 +516,7 @@ export default function Chat() {
             <div className={styles.chatWindow}>
                 {messages.length === 0 ? (
                     <div className={styles.emptyState}>
-                        <DailyQuote />
+                        <MoodGuidance onSelectVerse={handleSelectVerseForDiscussion} />
                         <div className={styles.om}>ॐ</div>
                         <h2 className={styles.emptyStateTitle}>Divine Intelligence</h2>
                         <p className={styles.emptyStateDesc}>Seek wisdom from the eternal scriptures. Ask a question about life, dharma, or spiritual truth.</p>

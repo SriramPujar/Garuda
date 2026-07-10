@@ -1,0 +1,251 @@
+.container {
+    width: 100%;
+    max-width: 800px;
+    margin: 0 auto 1.5rem auto;
+    animation: fadeIn 0.4s ease forwards;
+}
+
+.moodSection {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    gap: 1.25rem;
+}
+
+.headerTitle {
+    font-family: var(--font-serif);
+    color: var(--color-saffron-500, #D4AF37);
+    font-size: 1.25rem;
+    margin: 0;
+    font-weight: 500;
+    letter-spacing: 0.03em;
+}
+
+.grid {
+    display: flex;
+    justify-content: center;
+    gap: 0.75rem;
+    flex-wrap: wrap;
+    width: 100%;
+}
+
+.moodCard {
+    background: rgba(255, 255, 255, 0.03);
+    border: 1px solid rgba(255, 255, 255, 0.06);
+    border-radius: 16px;
+    padding: 0.85rem 1.25rem;
+    cursor: pointer;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    gap: 0.5rem;
+    min-width: 110px;
+    transition: all 0.3s cubic-bezier(0.16, 1, 0.3, 1);
+}
+
+.moodCard:hover {
+    background: rgba(212, 175, 55, 0.08);
+    border-color: rgba(212, 175, 55, 0.3);
+    transform: translateY(-2px);
+    box-shadow: 0 6px 20px rgba(0, 0, 0, 0.25);
+}
+
+.moodIcon {
+    font-size: 1.75rem;
+}
+
+.moodLabel {
+    font-family: var(--font-serif);
+    font-size: 0.85rem;
+    color: var(--color-text-secondary);
+    font-weight: 500;
+}
+
+.moodCard:hover .moodLabel {
+    color: #ffffff;
+}
+
+.cardSection {
+    width: 100%;
+}
+
+.loadingCard {
+    background: linear-gradient(135deg, #0d162a 0%, #060b14 100%);
+    border: 1px solid rgba(212, 175, 55, 0.15);
+    border-radius: 20px;
+    padding: 2.5rem;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    gap: 1rem;
+    box-shadow: 0 10px 30px rgba(0, 0, 0, 0.3);
+}
+
+.spinner {
+    width: 32px;
+    height: 32px;
+    border: 3px solid rgba(212, 175, 55, 0.1);
+    border-top-color: var(--color-saffron-500, #D4AF37);
+    border-radius: 50%;
+    animation: spin 1s linear infinite;
+}
+
+.loadingText {
+    font-family: var(--font-serif);
+    color: var(--color-text-secondary);
+    font-size: 0.95rem;
+    margin: 0;
+}
+
+.reflectionCard {
+    background: linear-gradient(135deg, #0d162a 0%, #060b14 100%);
+    border: 1px solid rgba(212, 175, 55, 0.2);
+    border-radius: 20px;
+    padding: 2rem;
+    box-shadow: 0 12px 40px rgba(0, 0, 0, 0.4), 0 0 20px rgba(212, 175, 55, 0.05);
+    display: flex;
+    flex-direction: column;
+    gap: 1.5rem;
+    animation: slideUpScale 0.4s cubic-bezier(0.16, 1, 0.3, 1) forwards;
+}
+
+.verseHeader {
+    display: flex;
+    flex-direction: column;
+    position: relative;
+}
+
+.quoteMark {
+    position: absolute;
+    top: -1.5rem;
+    left: -1rem;
+    font-size: 3.5rem;
+    font-family: var(--font-serif);
+    color: rgba(212, 175, 55, 0.15);
+    line-height: 1;
+    user-select: none;
+}
+
+.verseText {
+    font-family: var(--font-serif);
+    font-size: 1.15rem;
+    line-height: 1.7;
+    color: #f1f5f9;
+    margin: 0 0 0.75rem 0;
+    font-style: italic;
+    position: relative;
+    z-index: 1;
+}
+
+.verseSource {
+    font-family: var(--font-serif);
+    font-size: 0.9rem;
+    color: var(--color-saffron-500, #D4AF37);
+    font-weight: 500;
+    align-self: flex-end;
+}
+
+.reflectionBody {
+    background: rgba(212, 175, 55, 0.05);
+    border: 1px solid rgba(212, 175, 55, 0.12);
+    border-radius: 12px;
+    padding: 1.25rem;
+}
+
+.reflectionTitle {
+    font-family: var(--font-serif);
+    color: var(--color-saffron-500, #D4AF37);
+    font-size: 0.95rem;
+    margin: 0 0 0.5rem 0;
+    font-weight: 600;
+    letter-spacing: 0.02em;
+}
+
+.reflectionText {
+    font-family: var(--font-serif);
+    font-size: 1rem;
+    line-height: 1.6;
+    color: #cbd5e1;
+    margin: 0;
+}
+
+.actions {
+    display: flex;
+    justify-content: flex-end;
+    gap: 0.75rem;
+    margin-top: 0.5rem;
+}
+
+.resetBtn {
+    padding: 0.65rem 1.25rem;
+    background: transparent;
+    border: 1px solid rgba(255, 255, 255, 0.12);
+    border-radius: 10px;
+    font-family: var(--font-serif);
+    color: var(--color-text-secondary);
+    font-size: 0.85rem;
+    cursor: pointer;
+    transition: all 0.3s ease;
+}
+
+.resetBtn:hover {
+    background: rgba(255, 255, 255, 0.05);
+    border-color: rgba(255, 255, 255, 0.25);
+    color: #ffffff;
+}
+
+.discussBtn {
+    padding: 0.65rem 1.25rem;
+    background: linear-gradient(135deg, var(--color-saffron-500), #b58f27);
+    border: none;
+    border-radius: 10px;
+    font-family: var(--font-serif);
+    color: #060b14;
+    font-size: 0.85rem;
+    font-weight: bold;
+    cursor: pointer;
+    transition: all 0.3s cubic-bezier(0.16, 1, 0.3, 1);
+}
+
+.discussBtn:hover {
+    background: linear-gradient(135deg, #e5c158, var(--color-saffron-500));
+    box-shadow: 0 4px 15px rgba(212, 175, 55, 0.25);
+    transform: translateY(-1px);
+}
+
+.discussBtn:active {
+    transform: translateY(0);
+}
+
+.errorCard {
+    background: linear-gradient(135deg, #0d162a 0%, #060b14 100%);
+    border: 1px solid rgba(255, 80, 80, 0.2);
+    border-radius: 20px;
+    padding: 2rem;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    gap: 1rem;
+    color: #ff6b6b;
+    font-family: var(--font-serif);
+}
+
+@keyframes spin {
+    to { transform: rotate(360deg); }
+}
+
+@keyframes fadeIn {
+    from { opacity: 0; }
+    to { opacity: 1; }
+}
+
+@keyframes slideUpScale {
+    from {
+        opacity: 0;
+        transform: scale(0.96) translateY(15px);
+    }
+    to {
+        opacity: 1;
+        transform: scale(1) translateY(0);
+    }
+}
