@@ -641,11 +641,11 @@ export default function Chat() {
                     <div className={styles.chatWindow}>
                         {messages.length === 0 ? (
                             <div className={styles.emptyState}>
-                                <MoodGuidance onSelectVerse={handleSelectVerseForDiscussion} />
                                 <div className={styles.om}>ॐ</div>
                                 <h2 className={styles.emptyStateTitle}>Divine Intelligence</h2>
                                 <p className={styles.emptyStateDesc}>Seek wisdom from the eternal scriptures. Ask a question about life, dharma, or spiritual truth.</p>
-                                <p style={{ marginTop: '0.5rem', fontSize: '0.85rem', opacity: 0.5 }}>Examples: &quot;Why do we suffer?&quot;, &quot;What is Dharma?&quot;, &quot;How to find inner peace?&quot;</p>
+                                <p style={{ marginTop: '0.5rem', fontSize: '0.85rem', opacity: 0.5, marginBottom: '2.5rem' }}>Examples: &quot;Why do we suffer?&quot;, &quot;What is Dharma?&quot;, &quot;How to find inner peace?&quot;</p>
+                                <MoodGuidance onSelectVerse={handleSelectVerseForDiscussion} />
                             </div>
                         ) : (
                             messages.map((m) => (
