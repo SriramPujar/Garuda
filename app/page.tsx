@@ -221,6 +221,7 @@ export default function Chat() {
     const startNewChat = () => {
         setCurrentSessionId(null);
         setMessages([]);
+        setActiveTab('chat');
         setIsSidebarOpen(false); // Close sidebar on mobile on selection
     };
 
@@ -229,6 +230,7 @@ export default function Chat() {
         if (session) {
             setCurrentSessionId(session.id);
             setMessages(session.messages);
+            setActiveTab('chat');
             setIsSidebarOpen(false);
         }
     };
@@ -495,12 +497,6 @@ export default function Chat() {
 
                     <div className="sidebar-section-title">Daily Wisdom</div>
                     <div className="sidebar-menu">
-                        <button 
-                            className={`sidebar-menu-btn ${activeTab === 'chat' ? 'active' : ''}`}
-                            onClick={() => { setActiveTab('chat'); setIsSidebarOpen(false); }}
-                        >
-                            <span>💬</span> Spiritual Guidance
-                        </button>
                         <button 
                             className={`sidebar-menu-btn ${activeTab === 'quiz' ? 'active' : ''}`}
                             onClick={() => { setActiveTab('quiz'); setIsSidebarOpen(false); }}
