@@ -75,6 +75,11 @@ export default function ScriptureStudy({ scriptureId, onAskGaruda }: ScriptureSt
             if (res.ok) {
                 const data = await res.json();
                 setVerseData(data);
+                if (data.actualChapter && data.actualVerse) {
+                    setChapter(data.actualChapter);
+                    setVerse(data.actualVerse);
+                    saveProgress(data.actualChapter, data.actualVerse);
+                }
             } else {
                 throw new Error("Failed to fetch verse");
             }
@@ -239,7 +244,7 @@ export default function ScriptureStudy({ scriptureId, onAskGaruda }: ScriptureSt
                     <div className={styles.studyCard}>
                         <div className={styles.studyCardHeader}>
                             <span className={styles.breadcrumb}>
-                                {meta.name} &gt; {meta.unitsLabel} {chapter}, Verse {verse}
+                                {verseData?.citation || `${meta.name} > ${meta.unitsLabel} ${chapter}, Verse ${verse}`}
                             </span>
                             <button className={styles.changePosBtn} onClick={() => setStudyState('setup')}>
                                 Adjust Start Point

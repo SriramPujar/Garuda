@@ -36,9 +36,11 @@ env_setup.txt
 
 # Large generated data files (use ingest scripts to regenerate)
 /data/vector_store.json
+/data/Shrimad_Bhagvat_Puran.csv
 /assets/
 
 /app/generated/prisma
+/data/bg_cache/
 
 *.db
 *.db-journal
