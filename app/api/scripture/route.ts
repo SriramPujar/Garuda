@@ -99,11 +99,24 @@ function getUddhavaVerse(chapter: number, verse: number) {
     return null;
 }
 
+// Determine writable cache directory path depending on production/local environment
+function getGitaCacheDir(): string {
+    const isVercel = process.env.VERCEL || process.env.NOW_BUILDER;
+    if (isVercel) {
+        return path.join('/tmp', 'bg_cache');
+    }
+    return path.join(process.cwd(), 'data', 'bg_cache');
+}
+
 // Fetch Bhagavad Gita verse from cache/Hugging Face
 async function fetchGitaVerse(chapter: number, verse: number): Promise<{ sanskrit: string; translation: string; citation: string; actualChapter: number; actualVerse: number } | null> {
-    const cacheDir = path.join(process.cwd(), 'data', 'bg_cache');
+    const cacheDir = getGitaCacheDir();
     if (!fs.existsSync(cacheDir)) {
-        fs.mkdirSync(cacheDir, { recursive: true });
+        try {
+            fs.mkdirSync(cacheDir, { recursive: true });
+        } catch (err) {
+            console.error("Failed to create BG cache directory:", err);
+        }
     }
 
     const checkAndParse = (filePath: string) => {
@@ -137,7 +150,11 @@ async function fetchGitaVerse(chapter: number, verse: number): Promise<{ sanskri
         const response = await fetch(hfUrl);
         if (response.ok) {
             const data = await response.json();
-            fs.writeFileSync(cachePath, JSON.stringify(data, null, 2), 'utf8');
+            try {
+                fs.writeFileSync(cachePath, JSON.stringify(data, null, 2), 'utf8');
+            } catch (writeErr) {
+                console.error("Failed to write BG cache file:", writeErr);
+            }
             const sanskrit = `${data.slok || ''}\n\n[Transliteration]\n${data.transliteration || ''}`;
             const translation = data.siva?.et || data.purohit?.et || data.adi?.et || data.gambir?.et || '';
             return {
@@ -172,7 +189,11 @@ async function fetchGitaVerse(chapter: number, verse: number): Promise<{ sanskri
             const response = await fetch(hfNextUrl);
             if (response.ok) {
                 const data = await response.json();
-                fs.writeFileSync(nextCachePath, JSON.stringify(data, null, 2), 'utf8');
+                try {
+                    fs.writeFileSync(nextCachePath, JSON.stringify(data, null, 2), 'utf8');
+                } catch (writeErr) {
+                    console.error("Failed to write BG next chapter cache file:", writeErr);
+                }
                 const sanskrit = `${data.slok || ''}\n\n[Transliteration]\n${data.transliteration || ''}`;
                 const translation = data.siva?.et || data.purohit?.et || data.adi?.et || data.gambir?.et || '';
                 return {
