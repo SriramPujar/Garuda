@@ -39,6 +39,13 @@ const BOOKS = [
     { id: 'bhagavatam', label: 'Bhāgavatam',       icon: '🪷' },
 ];
 
+// Tone filter definitions
+const TONES = [
+    { id: 'traditional', label: 'Traditional / Sanskrit-heavy', icon: '📿' },
+    { id: 'beginner',    label: 'Simple / Beginner',  icon: '🌱' },
+    { id: 'modern',      label: 'Modern / Casual',      icon: '✨' },
+];
+
 export default function Chat() {
     const { data: session, status } = useSession();
     const [sessions, setSessions] = useState<Session[]>([]);
@@ -62,6 +69,7 @@ export default function Chat() {
     const [theme, setTheme] = useState<'dharma' | 'forest'>('dharma');
     const [isSidebarOpen, setIsSidebarOpen] = useState(false);
     const [activeFilter, setActiveFilter] = useState('all');
+    const [tone, setTone] = useState<'beginner' | 'traditional' | 'modern'>('traditional');
 
     // Generative AI content reporting states (Policy 11.16)
     const [reportingMessage, setReportingMessage] = useState<{ id: string; content: string } | null>(null);
@@ -330,6 +338,7 @@ export default function Chat() {
                 body: JSON.stringify({
                     messages: newMessages,
                     filter: activeFilter,
+                    tone: tone,
                     sessionId: activeSessionId,
                     title: newMessages[0].content.slice(0, 30)
                 }),
@@ -577,7 +586,7 @@ export default function Chat() {
 
             <div className={styles.inputArea}>
                 {/* Book Filter Chips */}
-                <div className={styles.filterBar} style={{ marginBottom: '0.75rem', width: '100%', maxWidth: '800px' }}>
+                <div className={styles.filterBar} style={{ marginBottom: '0.5rem', width: '100%', maxWidth: '800px' }}>
                     <span className={styles.filterLabel}>Search in:</span>
                     {BOOKS.map(book => (
                         <button
@@ -587,6 +596,20 @@ export default function Chat() {
                             onClick={() => setActiveFilter(book.id)}
                         >
                             {book.icon} {book.label}
+                        </button>
+                    ))}
+                </div>
+                {/* Tone Selector Chips */}
+                <div className={styles.filterBar} style={{ marginBottom: '0.75rem', width: '100%', maxWidth: '800px' }}>
+                    <span className={styles.filterLabel}>Garuda Tone:</span>
+                    {TONES.map(t => (
+                        <button
+                            key={t.id}
+                            type="button"
+                            className={`${styles.filterChip} ${tone === t.id ? styles.filterChipActive : ''}`}
+                            onClick={() => setTone(t.id as any)}
+                        >
+                            {t.icon} {t.label}
                         </button>
                     ))}
                 </div>
