@@ -448,3 +448,53 @@ h6 {
   color: #ff6b6b;
   background: rgba(255, 80, 80, 0.1);
 }
+
+/* Sidebar Menu Section styling */
+.sidebar-section-title {
+  font-family: var(--font-serif);
+  font-size: 0.72rem;
+  color: var(--color-saffron-500);
+  opacity: 0.8;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+  margin: 0.5rem 0 0.5rem 0.25rem;
+}
+
+.sidebar-menu {
+  display: flex;
+  flex-direction: column;
+  gap: 0.4rem;
+  margin-bottom: 1.5rem;
+  border-bottom: 1px solid rgba(212, 175, 55, 0.12);
+  padding-bottom: 1rem;
+}
+
+.sidebar-menu-btn {
+  width: 100%;
+  padding: 0.75rem 0.85rem;
+  background: transparent;
+  border: 1px solid transparent;
+  border-radius: 8px;
+  color: var(--color-text-secondary);
+  font-family: var(--font-serif);
+  font-size: 0.88rem;
+  cursor: pointer;
+  display: flex;
+  align-items: center;
+  gap: 0.6rem;
+  text-align: left;
+  transition: all 0.3s cubic-bezier(0.16, 1, 0.3, 1);
+}
+
+.sidebar-menu-btn:hover {
+  background: rgba(212, 175, 55, 0.05);
+  color: #ffffff;
+  border-color: rgba(212, 175, 55, 0.15);
+}
+
+.sidebar-menu-btn.active {
+  background: rgba(212, 175, 55, 0.1);
+  color: var(--color-saffron-500);
+  border-color: rgba(212, 175, 55, 0.25);
+  font-weight: 500;
+}

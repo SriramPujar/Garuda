@@ -6,6 +6,7 @@ import styles from './page.module.css';
 import LoginModal from './components/LoginModal';
 import ConfirmModal from './components/ConfirmModal';
 import MoodGuidance from './components/MoodGuidance';
+import VedicQuiz from './components/VedicQuiz';
 import { Capacitor } from '@capacitor/core';
 
 // Map raw PDF filenames → beautiful display names
@@ -70,6 +71,7 @@ export default function Chat() {
     const [isSidebarOpen, setIsSidebarOpen] = useState(false);
     const [activeFilter, setActiveFilter] = useState('all');
     const [tone, setTone] = useState<'beginner' | 'traditional' | 'modern'>('traditional');
+    const [activeTab, setActiveTab] = useState<'chat' | 'quiz'>('chat');
 
     // Generative AI content reporting states (Policy 11.16)
     const [reportingMessage, setReportingMessage] = useState<{ id: string; content: string } | null>(null);
@@ -411,6 +413,12 @@ export default function Chat() {
         sendCustomPrompt(prompt);
     };
 
+    const handleContemplationSubmit = (promptText: string, reflectionText: string) => {
+        setActiveTab('chat');
+        const prompt = `Here is my reflection on today's Vedic prompt: "${promptText}"\n\nMy reflection:\n"${reflectionText}"\n\nPlease read my reflection, validate it with scriptural teachings, and provide your guidance.`;
+        sendCustomPrompt(prompt);
+    };
+
     if (status === 'loading') {
         return <div style={{ height: '100vh', display: 'flex', alignItems: 'center', justifyContent: 'center', background: 'var(--bg-primary)', color: 'var(--color-saffron-500)' }}><h3 style={{fontFamily: 'var(--font-serif)'}}>Communing...</h3></div>;
     }
@@ -441,6 +449,24 @@ export default function Chat() {
                         🗑 Delete All Chats
                     </button>
                 )}
+
+                <div className="sidebar-section-title">Daily Wisdom</div>
+                <div className="sidebar-menu">
+                    <button 
+                        className={`sidebar-menu-btn ${activeTab === 'chat' ? 'active' : ''}`}
+                        onClick={() => { setActiveTab('chat'); setIsSidebarOpen(false); }}
+                    >
+                        <span>💬</span> Spiritual Guidance
+                    </button>
+                    <button 
+                        className={`sidebar-menu-btn ${activeTab === 'quiz' ? 'active' : ''}`}
+                        onClick={() => { setActiveTab('quiz'); setIsSidebarOpen(false); }}
+                    >
+                        <span>📝</span> Daily Quiz & Prompt
+                    </button>
+                </div>
+
+                <div className="sidebar-section-title">Chat History</div>
 
                 <div className="session-list">
                     {sessions.map(session => (
@@ -513,132 +539,140 @@ export default function Chat() {
                 </div>
             </header>
 
-            <div className={styles.chatWindow}>
-                {messages.length === 0 ? (
-                    <div className={styles.emptyState}>
-                        <MoodGuidance onSelectVerse={handleSelectVerseForDiscussion} />
-                        <div className={styles.om}>ॐ</div>
-                        <h2 className={styles.emptyStateTitle}>Divine Intelligence</h2>
-                        <p className={styles.emptyStateDesc}>Seek wisdom from the eternal scriptures. Ask a question about life, dharma, or spiritual truth.</p>
-                        <p style={{ marginTop: '0.5rem', fontSize: '0.85rem', opacity: 0.5 }}>Examples: &quot;Why do we suffer?&quot;, &quot;What is Dharma?&quot;, &quot;How to find inner peace?&quot;</p>
-                    </div>
-                ) : (
-                    messages.map((m) => (
-                        <div
-                            key={m.id}
-                            className={`${styles.message} ${m.role === 'user' ? styles.userMessage : styles.aiMessage
-                                }`}
-                        >
-                            <div
-                                className="whitespace-pre-wrap"
-                                dangerouslySetInnerHTML={{ 
-                                    __html: m.content
-                                        .replace(/\n/g, '<br/>')
-                                        .replace(/\*\*(.*?)\*\*/g, '<strong>$1</strong>')
-                                        .replace(/\[Source: (.*?)\]/g, (_match: string, filename: string) => 
-                                            `<span class="citation">📜 ${prettifySource(filename)}</span>`
-                                        )
-                                }}
-                            />
-                            {m.role === 'assistant' && !isLoading && (
-                                <div style={{
-                                    position: 'absolute', bottom: '-20px', left: '0',
-                                    display: 'flex', gap: '16px', alignItems: 'center'
-                                }}>
-                                    <button
-                                        onClick={() => speak(m.content)}
-                                        style={{
-                                            background: 'transparent', border: 'none', color: 'var(--color-text-secondary)',
-                                            fontSize: '0.8rem', cursor: 'pointer', opacity: 0.7
-                                        }}
-                                    >
-                                        🔊 Listen
-                                    </button>
-                                    <button
-                                        onClick={() => handleReportClick(m.id, m.content)}
-                                        style={{
-                                            background: 'transparent', border: 'none', color: 'var(--color-text-secondary)',
-                                            fontSize: '0.8rem', cursor: 'pointer', opacity: 0.7
-                                        }}
-                                    >
-                                        🚩 Report Issue
-                                    </button>
-                                </div>
-                            )}
-                        </div>
-                    ))
-                )}
-                {isLoading && messages[messages.length - 1]?.role !== 'assistant' && (
-                    <div className={styles.contemplatingWrapper}>
-                        <div style={{ display: 'flex', alignItems: 'center', gap: '0.6rem' }}>
-                            <div className={styles.dots}>
-                                <div className={styles.dot} />
-                                <div className={styles.dot} />
-                                <div className={styles.dot} />
+            {activeTab === 'quiz' ? (
+                <div style={{ flexGrow: 1, overflowY: 'auto' }}>
+                    <VedicQuiz onSubmitReflection={handleContemplationSubmit} />
+                </div>
+            ) : (
+                <>
+                    <div className={styles.chatWindow}>
+                        {messages.length === 0 ? (
+                            <div className={styles.emptyState}>
+                                <MoodGuidance onSelectVerse={handleSelectVerseForDiscussion} />
+                                <div className={styles.om}>ॐ</div>
+                                <h2 className={styles.emptyStateTitle}>Divine Intelligence</h2>
+                                <p className={styles.emptyStateDesc}>Seek wisdom from the eternal scriptures. Ask a question about life, dharma, or spiritual truth.</p>
+                                <p style={{ marginTop: '0.5rem', fontSize: '0.85rem', opacity: 0.5 }}>Examples: &quot;Why do we suffer?&quot;, &quot;What is Dharma?&quot;, &quot;How to find inner peace?&quot;</p>
                             </div>
-                            <span className={styles.contemplatingText}>Searching the scriptures…</span>
-                        </div>
-                        <div className={styles.contemplatingBooks}>
-                            {(activeFilter === 'all' ? ['Bhagavad Gita', 'Uddhava Gita', 'Śrīmad Bhāgavatam'] :
-                                activeFilter === 'bg' ? ['Bhagavad Gita'] :
-                                activeFilter === 'uddhava' ? ['Uddhava Gita'] :
-                                ['Śrīmad Bhāgavatam']
-                            ).map(book => (
-                                <span key={book} className={styles.contemplatingBook}>📜 {book}</span>
+                        ) : (
+                            messages.map((m) => (
+                                <div
+                                    key={m.id}
+                                    className={`${styles.message} ${m.role === 'user' ? styles.userMessage : styles.aiMessage
+                                        }`}
+                                >
+                                    <div
+                                        className="whitespace-pre-wrap"
+                                        dangerouslySetInnerHTML={{ 
+                                            __html: m.content
+                                                .replace(/\n/g, '<br/>')
+                                                .replace(/\*\*(.*?)\*\*/g, '<strong>$1</strong>')
+                                                .replace(/\[Source: (.*?)\]/g, (_match: string, filename: string) => 
+                                                    `<span class="citation">📜 ${prettifySource(filename)}</span>`
+                                                )
+                                        }}
+                                    />
+                                    {m.role === 'assistant' && !isLoading && (
+                                        <div style={{
+                                            position: 'absolute', bottom: '-20px', left: '0',
+                                            display: 'flex', gap: '16px', alignItems: 'center'
+                                        }}>
+                                            <button
+                                                onClick={() => speak(m.content)}
+                                                style={{
+                                                    background: 'transparent', border: 'none', color: 'var(--color-text-secondary)',
+                                                    fontSize: '0.8rem', cursor: 'pointer', opacity: 0.7
+                                                }}
+                                            >
+                                                🔊 Listen
+                                            </button>
+                                            <button
+                                                onClick={() => handleReportClick(m.id, m.content)}
+                                                style={{
+                                                    background: 'transparent', border: 'none', color: 'var(--color-text-secondary)',
+                                                    fontSize: '0.8rem', cursor: 'pointer', opacity: 0.7
+                                                }}
+                                            >
+                                                🚩 Report Issue
+                                            </button>
+                                        </div>
+                                    )}
+                                </div>
+                            ))
+                        )}
+                        {isLoading && messages[messages.length - 1]?.role !== 'assistant' && (
+                            <div className={styles.contemplatingWrapper}>
+                                <div style={{ display: 'flex', alignItems: 'center', gap: '0.6rem' }}>
+                                    <div className={styles.dots}>
+                                        <div className={styles.dot} />
+                                        <div className={styles.dot} />
+                                        <div className={styles.dot} />
+                                    </div>
+                                    <span className={styles.contemplatingText}>Searching the scriptures…</span>
+                                </div>
+                                <div className={styles.contemplatingBooks}>
+                                    {(activeFilter === 'all' ? ['Bhagavad Gita', 'Uddhava Gita', 'Śrīmad Bhāgavatam'] :
+                                        activeFilter === 'bg' ? ['Bhagavad Gita'] :
+                                        activeFilter === 'uddhava' ? ['Uddhava Gita'] :
+                                        ['Śrīmad Bhāgavatam']
+                                    ).map(book => (
+                                        <span key={book} className={styles.contemplatingBook}>📜 {book}</span>
+                                    ))}
+                                </div>
+                            </div>
+                        )}
+                        <div ref={messagesEndRef} />
+                    </div>
+
+                    <div className={styles.inputArea}>
+                        {/* Book Filter Chips */}
+                        <div className={styles.filterBar} style={{ marginBottom: '0.5rem', width: '100%', maxWidth: '800px' }}>
+                            <span className={styles.filterLabel}>Search in:</span>
+                            {BOOKS.map(book => (
+                                <button
+                                    key={book.id}
+                                    type="button"
+                                    className={`${styles.filterChip} ${activeFilter === book.id ? styles.filterChipActive : ''}`}
+                                    onClick={() => setActiveFilter(book.id)}
+                                >
+                                    {book.icon} {book.label}
+                                </button>
                             ))}
                         </div>
+                        {/* Tone Selector Chips */}
+                        <div className={styles.filterBar} style={{ marginBottom: '0.75rem', width: '100%', maxWidth: '800px' }}>
+                            <span className={styles.filterLabel}>Garuda Tone:</span>
+                            {TONES.map(t => (
+                                <button
+                                    key={t.id}
+                                    type="button"
+                                    className={`${styles.filterChip} ${tone === t.id ? styles.filterChipActive : ''}`}
+                                    onClick={() => setTone(t.id as any)}
+                                >
+                                    {t.icon} {t.label}
+                                </button>
+                            ))}
+                        </div>
+                        <form onSubmit={handleSubmit} className={styles.form}>
+                            <input
+                                className={styles.input}
+                                value={input}
+                                onChange={(e) => setInput(e.target.value)}
+                                placeholder="Ask a question about life, dharma, or spirituality..."
+                                disabled={isLoading}
+                                suppressHydrationWarning
+                            />
+                            <button type="submit" className={styles.sendButton} disabled={isLoading || !input.trim()}>
+                                {isLoading ? (
+                                    <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" className="animate-spin"><path d="M21 12a9 9 0 1 1-6.219-8.56" /></svg>
+                                ) : (
+                                    <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><line x1="22" y1="2" x2="11" y2="13"></line><polygon points="22 2 15 22 11 13 2 9 22 2"></polygon></svg>
+                                )}
+                            </button>
+                        </form>
                     </div>
-                )}
-                <div ref={messagesEndRef} />
-            </div>
-
-            <div className={styles.inputArea}>
-                {/* Book Filter Chips */}
-                <div className={styles.filterBar} style={{ marginBottom: '0.5rem', width: '100%', maxWidth: '800px' }}>
-                    <span className={styles.filterLabel}>Search in:</span>
-                    {BOOKS.map(book => (
-                        <button
-                            key={book.id}
-                            type="button"
-                            className={`${styles.filterChip} ${activeFilter === book.id ? styles.filterChipActive : ''}`}
-                            onClick={() => setActiveFilter(book.id)}
-                        >
-                            {book.icon} {book.label}
-                        </button>
-                    ))}
-                </div>
-                {/* Tone Selector Chips */}
-                <div className={styles.filterBar} style={{ marginBottom: '0.75rem', width: '100%', maxWidth: '800px' }}>
-                    <span className={styles.filterLabel}>Garuda Tone:</span>
-                    {TONES.map(t => (
-                        <button
-                            key={t.id}
-                            type="button"
-                            className={`${styles.filterChip} ${tone === t.id ? styles.filterChipActive : ''}`}
-                            onClick={() => setTone(t.id as any)}
-                        >
-                            {t.icon} {t.label}
-                        </button>
-                    ))}
-                </div>
-                <form onSubmit={handleSubmit} className={styles.form}>
-                    <input
-                        className={styles.input}
-                        value={input}
-                        onChange={(e) => setInput(e.target.value)}
-                        placeholder="Ask a question about life, dharma, or spirituality..."
-                        disabled={isLoading}
-                        suppressHydrationWarning
-                    />
-                    <button type="submit" className={styles.sendButton} disabled={isLoading || !input.trim()}>
-                        {isLoading ? (
-                            <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" className="animate-spin"><path d="M21 12a9 9 0 1 1-6.219-8.56" /></svg>
-                        ) : (
-                            <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><line x1="22" y1="2" x2="11" y2="13"></line><polygon points="22 2 15 22 11 13 2 9 22 2"></polygon></svg>
-                        )}
-                    </button>
-                </form>
-            </div>
+                </>
+            )}
 
             {reportingMessage && (
                 <div style={{
