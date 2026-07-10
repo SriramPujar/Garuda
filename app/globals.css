@@ -202,8 +202,6 @@ h6 {
 }
 
 .session-list {
-  flex-grow: 1;
-  overflow-y: auto;
   display: flex;
   flex-direction: column;
   gap: 0.5rem;
