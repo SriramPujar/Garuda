@@ -4,19 +4,19 @@ import fs from 'fs';
 import path from 'path';
 
 // Static imports of Canto JSON datasets to force Next.js compilation bundling
-import canto1 from '../../../data/bhagavatam/canto_1.json';
-import canto2 from '../../../data/bhagavatam/canto_2.json';
-import canto3 from '../../../data/bhagavatam/canto_3.json';
-import canto4 from '../../../data/bhagavatam/canto_4.json';
-import canto5 from '../../../data/bhagavatam/canto_5.json';
-import canto6 from '../../../data/bhagavatam/canto_6.json';
-import canto7 from '../../../data/bhagavatam/canto_7.json';
-import canto8 from '../../../data/bhagavatam/canto_8.json';
-import canto9 from '../../../data/bhagavatam/canto_9.json';
-import canto10 from '../../../data/bhagavatam/canto_10.json';
-import canto11 from '../../../data/bhagavatam/canto_11.json';
-import canto12 from '../../../data/bhagavatam/canto_12.json';
-import canto13 from '../../../data/bhagavatam/canto_13.json';
+import canto1 from './bhagavatam/canto_1.json';
+import canto2 from './bhagavatam/canto_2.json';
+import canto3 from './bhagavatam/canto_3.json';
+import canto4 from './bhagavatam/canto_4.json';
+import canto5 from './bhagavatam/canto_5.json';
+import canto6 from './bhagavatam/canto_6.json';
+import canto7 from './bhagavatam/canto_7.json';
+import canto8 from './bhagavatam/canto_8.json';
+import canto9 from './bhagavatam/canto_9.json';
+import canto10 from './bhagavatam/canto_10.json';
+import canto11 from './bhagavatam/canto_11.json';
+import canto12 from './bhagavatam/canto_12.json';
+import canto13 from './bhagavatam/canto_13.json';
 
 export const maxDuration = 30;
 
