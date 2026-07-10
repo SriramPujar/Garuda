@@ -20,147 +20,72 @@ const CORS_HEADERS = {
     'Access-Control-Allow-Headers': 'Content-Type, Authorization, X-Requested-With',
 };
 
-// Helper to parse a single CSV row with quotes and escaping support
-function parseCSVLine(line: string): string[] {
-    const result: string[] = [];
-    let current = '';
-    let inQuotes = false;
-    for (let i = 0; i < line.length; i++) {
-        const char = line[i];
-        if (char === '"') {
-            if (inQuotes && line[i + 1] === '"') {
-                current += '"';
-                i++; // Skip escaped quote
-            } else {
-                inQuotes = !inQuotes;
-            }
-        } else if (char === ',' && !inQuotes) {
-            result.push(current);
-            current = '';
-        } else {
-            current += char;
-        }
-    }
-    result.push(current);
-    return result;
-}
-
-// In-memory cache for parsed Bhagavatam rows
-interface BhagavatamRow {
-    key: string;
-    canto: number;
-    chapter: number;
-    verse: number;
-    sanskrit: string;
-    transliteration: string;
-}
-
-let cachedBhagavatamRows: BhagavatamRow[] | null = null;
-
-// Determine writable CSV directory path depending on production/local environment
-function getCsvPath(): string {
-    const isVercel = process.env.VERCEL || process.env.NOW_BUILDER;
-    if (isVercel) {
-        return path.join('/tmp', 'Shrimad_Bhagvat_Puran.csv');
-    }
-    return path.join(process.cwd(), 'data', 'Shrimad_Bhagvat_Puran.csv');
-}
-
-async function getBhagavatamRows(): Promise<BhagavatamRow[]> {
-    if (cachedBhagavatamRows) {
-        return cachedBhagavatamRows;
-    }
-
-    const csvPath = getCsvPath();
-    
-    // Auto-download dataset file if not present (Vercel cold start or clean dev setup)
-    if (!fs.existsSync(csvPath)) {
-        console.log("Bhagavatam CSV file not found. Downloading dynamically from Hugging Face...");
-        try {
-            const dir = path.dirname(csvPath);
-            if (!fs.existsSync(dir)) {
-                fs.mkdirSync(dir, { recursive: true });
-            }
-            const res = await fetch('https://huggingface.co/datasets/snskrt/Shrimad_Bhagvat_Puran/raw/main/0_Shrimad_Bhagvat_Puran.csv');
-            if (!res.ok) {
-                throw new Error(`Failed to download dataset CSV: ${res.status}`);
-            }
-            const csvText = await res.text();
-            fs.writeFileSync(csvPath, csvText, 'utf8');
-            console.log("Bhagavatam CSV downloaded successfully and saved to:", csvPath);
-        } catch (downloadErr) {
-            console.error("Error downloading Srimad Bhagavatam dataset CSV:", downloadErr);
-            return [];
-        }
+// Retrieve a Srimad Bhagavatam verse by Canto and sequential verse index
+function getBhagavatamVerse(canto: number, verseIndex: number) {
+    const jsonPath = path.join(process.cwd(), 'data', 'bhagavatam', `canto_${canto}.json`);
+    if (!fs.existsSync(jsonPath)) {
+        console.error("Bhagavatam Canto JSON not found at:", jsonPath);
+        return null;
     }
 
     try {
-        const fileContent = fs.readFileSync(csvPath, 'utf8');
-        const rows: BhagavatamRow[] = [];
-        let currentLine = '';
-        let inQuotes = false;
-
-        for (let i = 0; i < fileContent.length; i++) {
-            const char = fileContent[i];
-            if (char === '"') {
-                inQuotes = !inQuotes;
-                currentLine += char;
-            } else if (char === '\n' && !inQuotes) {
-                const line = currentLine.trim();
-                if (line && !line.startsWith('Number,')) {
-                    const cols = parseCSVLine(line);
-                    const key = cols[0] || '';
-                    const parts = key.split('.').map(Number);
-                    if (parts.length === 3 && !isNaN(parts[0]) && !isNaN(parts[1]) && !isNaN(parts[2])) {
-                        rows.push({
-                            key,
-                            canto: parts[0],
-                            chapter: parts[1],
-                            verse: parts[2],
-                            sanskrit: cols[1]?.replace(/^"|"$/g, '').replace(/""/g, '"').trim() || '',
-                            transliteration: cols[2]?.replace(/^"|"$/g, '').replace(/""/g, '"').trim() || ''
-                        });
-                    }
-                }
-                currentLine = '';
-            } else {
-                currentLine += char;
-            }
-        }
-
-        // Catch remaining content on last line
-        if (currentLine.trim()) {
-            const line = currentLine.trim();
-            if (line && !line.startsWith('Number,')) {
-                const cols = parseCSVLine(line);
-                const key = cols[0] || '';
-                const parts = key.split('.').map(Number);
-                if (parts.length === 3 && !isNaN(parts[0]) && !isNaN(parts[1]) && !isNaN(parts[2])) {
-                    rows.push({
-                        key,
-                        canto: parts[0],
-                        chapter: parts[1],
-                        verse: parts[2],
-                        sanskrit: cols[1]?.replace(/^"|"$/g, '').replace(/""/g, '"').trim() || '',
-                        transliteration: cols[2]?.replace(/^"|"$/g, '').replace(/""/g, '"').trim() || ''
-                    });
-                }
-            }
-        }
-
-        // Natural sorting: Canto -> Chapter -> Verse
-        rows.sort((a, b) => {
-            if (a.canto !== b.canto) return a.canto - b.canto;
-            if (a.chapter !== b.chapter) return a.chapter - b.chapter;
-            return a.verse - b.verse;
-        });
-
-        cachedBhagavatamRows = rows;
-        return rows;
+        const rows = JSON.parse(fs.readFileSync(jsonPath, 'utf8'));
+        if (rows.length === 0) return null;
+        
+        // Ensure index is within range
+        const safeIndex = Math.min(rows.length, Math.max(1, verseIndex));
+        const match = rows[safeIndex - 1];
+        
+        return {
+            match,
+            actualVerse: safeIndex
+        };
     } catch (e) {
-        console.error("Failed to read/parse Bhagavatam CSV file:", e);
-        return [];
+        console.error(`Failed to read/parse Bhagavatam Canto ${canto}:`, e);
+        return null;
     }
+}
+
+// Retrieve an Uddhava Gita verse by Chapter and Verse
+function getUddhavaVerse(chapter: number, verse: number) {
+    const targetCanto = 11;
+    const targetChapter = chapter + 5; // Uddhava Gita Chapter 1 = Canto 11, Chapter 6
+
+    const jsonPath = path.join(process.cwd(), 'data', 'bhagavatam', `canto_${targetCanto}.json`);
+    if (!fs.existsSync(jsonPath)) {
+        console.error("Uddhava Canto 11 JSON not found at:", jsonPath);
+        return null;
+    }
+
+    try {
+        const rows = JSON.parse(fs.readFileSync(jsonPath, 'utf8'));
+        
+        // 1. Direct try
+        const directMatch = rows.find((r: any) => r.chapter === targetChapter && r.verse === verse);
+        if (directMatch) {
+            return {
+                match: directMatch,
+                actualChapter: chapter,
+                actualVerse: verse
+            };
+        }
+
+        // 2. boundary cross check
+        if (verse > 1) {
+            const nextChapterMatch = rows.find((r: any) => r.chapter === targetChapter + 1 && r.verse === 1);
+            if (nextChapterMatch) {
+                return {
+                    match: nextChapterMatch,
+                    actualChapter: chapter + 1,
+                    actualVerse: 1
+                };
+            }
+        }
+    } catch (e) {
+        console.error("Failed to read/parse Uddhava verse from Canto 11:", e);
+    }
+
+    return null;
 }
 
 // Fetch Bhagavad Gita verse from cache/Hugging Face
@@ -339,45 +264,29 @@ export async function POST(req: Request) {
             }
         } else if (scripture === 'uddhava') {
             // ── UDDHAVA GITA ──
-            const rows = await getBhagavatamRows();
-            const targetCanto = 11;
-            const targetChapter = chapter + 5; // Uddhava Ch 1 starts at Bhagavatam Canto 11 Chapter 6
-            
-            const directRow = rows.find(r => r.canto === targetCanto && r.chapter === targetChapter && r.verse === verse);
-            if (directRow) {
-                loadedSanskrit = `${directRow.sanskrit}\n\n[Transliteration]\n${directRow.transliteration}`;
-                loadedTranslation = `Direct English study translation is being loaded from the Purana. (Transliteration: ${directRow.transliteration})`;
-                citation = `Uddhava Gita Chapter ${chapter}, Verse ${verse} (Srimad Bhagavatam 11.${targetChapter}.${verse})`;
+            const res = getUddhavaVerse(chapter, verse);
+            if (res) {
+                loadedSanskrit = `${res.match.sanskrit}\n\n[Transliteration]\n${res.match.transliteration}`;
+                loadedTranslation = `Direct study verse from the Purana. (Transliteration: ${res.match.transliteration})`;
+                actualChapter = res.actualChapter;
+                actualVerse = res.actualVerse;
+                citation = `Uddhava Gita Chapter ${actualChapter}, Verse ${actualVerse} (Srimad Bhagavatam 11.${res.match.chapter}.${res.match.verse})`;
             } else {
-                // If direct verse doesn't exist, check if we exceeded the chapter and need to transition to next chapter
-                const nextChapterRow = rows.find(r => r.canto === targetCanto && r.chapter === targetChapter + 1 && r.verse === 1);
-                if (nextChapterRow) {
-                    loadedSanskrit = `${nextChapterRow.sanskrit}\n\n[Transliteration]\n${nextChapterRow.transliteration}`;
-                    loadedTranslation = `Direct English study translation is being loaded from the Purana. (Transliteration: ${nextChapterRow.transliteration})`;
-                    actualChapter = chapter + 1;
-                    actualVerse = 1;
-                    citation = `Uddhava Gita Chapter ${actualChapter}, Verse 1 (Srimad Bhagavatam 11.${targetChapter + 1}.1)`;
-                } else {
-                    // Generic fallback
-                    loadedSanskrit = `|| Uddhava Gita Chapter ${chapter}, Verse ${verse} ||`;
-                    loadedTranslation = `Study passage for Uddhava Gita. Please check scripture indexes or navigate back.`;
-                    citation = `Uddhava Gita Chapter ${chapter}, Verse ${verse}`;
-                }
+                // Generic fallback
+                loadedSanskrit = `|| Uddhava Gita Chapter ${chapter}, Verse ${verse} ||`;
+                loadedTranslation = `Study passage for Uddhava Gita. Please check scripture indexes or navigate back.`;
+                citation = `Uddhava Gita Chapter ${chapter}, Verse ${verse}`;
             }
         } else if (scripture === 'bhagavatam') {
             // ── SHRIMAD BHAGAVATAM ──
-            const rows = await getBhagavatamRows();
-            const cantoRows = rows.filter(r => r.canto === chapter); // In Bhagavatam, Canto is passed in the "chapter" param
+            const res = getBhagavatamVerse(chapter, verse); // In Bhagavatam, Canto is passed in the "chapter" param
             
-            if (cantoRows.length > 0) {
-                const safeVerseIndex = Math.min(cantoRows.length, Math.max(1, verse));
-                const targetRow = cantoRows[safeVerseIndex - 1];
-                
-                loadedSanskrit = `${targetRow.sanskrit}\n\n[Transliteration]\n${targetRow.transliteration}`;
-                loadedTranslation = `Direct study verse from the Bhagavatam Purana. (Transliteration: ${targetRow.transliteration})`;
+            if (res) {
+                loadedSanskrit = `${res.match.sanskrit}\n\n[Transliteration]\n${res.match.transliteration}`;
+                loadedTranslation = `Direct study verse from the Bhagavatam Purana. (Transliteration: ${res.match.transliteration})`;
                 actualChapter = chapter;
-                actualVerse = safeVerseIndex;
-                citation = `Srimad Bhagavatam Canto ${chapter}, Chapter ${targetRow.chapter}, Verse ${targetRow.verse}`;
+                actualVerse = res.actualVerse;
+                citation = `Srimad Bhagavatam Canto ${chapter}, Chapter ${res.match.chapter}, Verse ${res.match.verse}`;
             } else {
                 loadedSanskrit = `|| Srimad Bhagavatam Canto ${chapter}, Verse ${verse} ||`;
                 loadedTranslation = `Study passage for Srimad Bhagavatam Canto ${chapter}.`;
