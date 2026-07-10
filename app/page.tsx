@@ -78,6 +78,9 @@ export default function Chat() {
     const [selectedNoteIdForLibrary, setSelectedNoteIdForLibrary] = useState<string | null>(null);
     const [isSearchOpen, setIsSearchOpen] = useState(false);
     const [isToneOpen, setIsToneOpen] = useState(false);
+    const [showInstallBanner, setShowInstallBanner] = useState(false);
+    const [isAlreadyInstalled, setIsAlreadyInstalled] = useState(false);
+    const [isAppleDevice, setIsAppleDevice] = useState(false);
 
     // Generative AI content reporting states (Policy 11.16)
     const [reportingMessage, setReportingMessage] = useState<{ id: string; content: string } | null>(null);
@@ -176,15 +179,44 @@ export default function Chat() {
         document.body.setAttribute('data-theme', theme);
     }, [theme]);
 
-    // Effect: Capture PWA install prompt
+    // Effect: Check installation state & handle Apple Safari installation popup
+    useEffect(() => {
+        if (typeof window !== 'undefined') {
+            const installed = window.matchMedia('(display-mode: standalone)').matches || (window.navigator as any).standalone === true;
+            setIsAlreadyInstalled(installed);
+
+            const isApple = /iPad|iPhone|iPod/.test(navigator.userAgent) && !(window as any).MSStream;
+            setIsAppleDevice(isApple);
+
+            // If iOS Safari and not installed, show iOS install instructions after 5 seconds
+            if (isApple && !installed) {
+                const dismissed = sessionStorage.getItem('garuda-install-dismissed');
+                if (!dismissed) {
+                    const timer = setTimeout(() => {
+                        setShowInstallBanner(true);
+                    }, 5000);
+                    return () => clearTimeout(timer);
+                }
+            }
+        }
+    }, []);
+
+    // Effect: Capture PWA install prompt for Chrome/Edge/Firefox
     useEffect(() => {
         const handler = (e: any) => {
             e.preventDefault();
             setDeferredPrompt(e);
+            const dismissed = sessionStorage.getItem('garuda-install-dismissed');
+            if (!dismissed && !isAlreadyInstalled) {
+                // Show custom installation banner after 3 seconds
+                setTimeout(() => {
+                    setShowInstallBanner(true);
+                }, 3000);
+            }
         };
         window.addEventListener('beforeinstallprompt', handler);
         return () => window.removeEventListener('beforeinstallprompt', handler);
-    }, []);
+    }, [isAlreadyInstalled]);
 
     // Sessions are saved directly to DB now
 
@@ -193,20 +225,29 @@ export default function Chat() {
         scrollToBottom();
     }, [messages]);
 
+    const handleDismissInstall = () => {
+        setShowInstallBanner(false);
+        sessionStorage.setItem('garuda-install-dismissed', 'true');
+    };
+
     const handleInstallClick = async () => {
         if (isNative) {
-            // Already running as a native app on Android/iOS
             alert('Garuda is already installed as an app on your device! ॐ');
             return;
         }
         if (!deferredPrompt) {
-            alert('To install Garuda:\n\nOn Android Chrome: tap the ⋮ menu → "Add to Home screen"\nOn iOS Safari: tap Share (□↑) → "Add to Home Screen"');
+            if (isAppleDevice) {
+                alert('To install Garuda on iOS:\n\n1. Tap the Share button [□↑] in Safari\n2. Scroll down and select "Add to Home Screen"\n3. Tap "Add" at the top right.');
+            } else {
+                alert('To install Garuda:\n\nOn Android Chrome: tap the ⋮ menu → "Add to Home screen"\nOn PC Chrome: click the install icon in the URL bar.');
+            }
             return;
         }
         deferredPrompt.prompt();
         const { outcome } = await deferredPrompt.userChoice;
         if (outcome === 'accepted') {
             setDeferredPrompt(null);
+            setShowInstallBanner(false);
         }
     };
 
@@ -918,6 +959,39 @@ export default function Chat() {
                 onConfirm={confirmModal.onConfirm}
                 onCancel={() => setConfirmModal(prev => ({ ...prev, isOpen: false }))}
             />
+            {/* PWA Install Banner */}
+            {showInstallBanner && (
+                <div className={styles.installBanner}>
+                    <h3 className={styles.installBannerTitle}>
+                        ॐ Install Garuda App
+                    </h3>
+                    <p className={styles.installBannerDesc}>
+                        {isAppleDevice ? (
+                            'Add Garuda to your home screen: tap the Share icon [□↑] in Safari, then select "Add to Home Screen".'
+                        ) : (
+                            'Add Garuda to your home screen for quick offline access, full-screen reading, and a faster experience.'
+                        )}
+                    </p>
+                    <div className={styles.installBannerActions}>
+                        <button 
+                            type="button" 
+                            onClick={handleDismissInstall} 
+                            className={styles.installBannerBtnCancel}
+                        >
+                            {isAppleDevice ? 'Close' : 'Maybe Later'}
+                        </button>
+                        {!isAppleDevice && (
+                            <button 
+                                type="button" 
+                                onClick={handleInstallClick} 
+                                className={styles.installBannerBtnInstall}
+                            >
+                                Install Now
+                            </button>
+                        )}
+                    </div>
+                </div>
+            )}
             </div> {/* Closing main-workspace */}
         </div>
     );
