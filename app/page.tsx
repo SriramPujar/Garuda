@@ -446,79 +446,81 @@ export default function Chat() {
 
             {/* Sidebar */}
             <div className={`sidebar ${isSidebarOpen ? 'open' : ''}`}>
-                <button className="new-chat-btn" onClick={startNewChat}>
-                    <span>+</span> New Chat
-                </button>
-                {sessions.length > 0 && (
-                    <button 
-                        className="delete-all-btn" 
-                        onClick={deleteAllSessions}
-                    >
-                        🗑 Delete All Chats
+                <div className="sidebar-body">
+                    <button className="new-chat-btn" onClick={startNewChat}>
+                        <span>+</span> New Chat
                     </button>
-                )}
-
-                <div className="sidebar-section-title">Daily Wisdom</div>
-                <div className="sidebar-menu">
-                    <button 
-                        className={`sidebar-menu-btn ${activeTab === 'chat' ? 'active' : ''}`}
-                        onClick={() => { setActiveTab('chat'); setIsSidebarOpen(false); }}
-                    >
-                        <span>💬</span> Spiritual Guidance
-                    </button>
-                    <button 
-                        className={`sidebar-menu-btn ${activeTab === 'quiz' ? 'active' : ''}`}
-                        onClick={() => { setActiveTab('quiz'); setIsSidebarOpen(false); }}
-                    >
-                        <span>📝</span> Daily Quiz & Prompt
-                    </button>
-                </div>
-
-                <div className="sidebar-section-title">Scripture Course</div>
-                <div className="sidebar-menu">
-                    <button 
-                        className={`sidebar-menu-btn ${activeTab === 'study' && selectedStudyScripture === 'bg' ? 'active' : ''}`}
-                        onClick={() => { setActiveTab('study'); setSelectedStudyScripture('bg'); setIsSidebarOpen(false); }}
-                    >
-                        <span>📖</span> Bhagavad Gita
-                    </button>
-                    <button 
-                        className={`sidebar-menu-btn ${activeTab === 'study' && selectedStudyScripture === 'uddhava' ? 'active' : ''}`}
-                        onClick={() => { setActiveTab('study'); setSelectedStudyScripture('uddhava'); setIsSidebarOpen(false); }}
-                    >
-                        <span>🌺</span> Uddhava Gita
-                    </button>
-                    <button 
-                        className={`sidebar-menu-btn ${activeTab === 'study' && selectedStudyScripture === 'bhagavatam' ? 'active' : ''}`}
-                        onClick={() => { setActiveTab('study'); setSelectedStudyScripture('bhagavatam'); setIsSidebarOpen(false); }}
-                    >
-                        <span>🪷</span> Śrīmad Bhāgavatam
-                    </button>
-                </div>
-
-                <div className="sidebar-section-title">Chat History</div>
-
-                <div className="session-list">
-                    {sessions.map(session => (
-                        <div
-                            key={session.id}
-                            className={`session-item ${currentSessionId === session.id ? 'active' : ''}`}
-                            onClick={() => selectSession(session.id)}
+                    {sessions.length > 0 && (
+                        <button 
+                            className="delete-all-btn" 
+                            onClick={deleteAllSessions}
                         >
-                            <div className="session-item-content">
-                                <div className="session-title">{session.title}</div>
-                                <div className="session-date">{new Date(session.timestamp).toLocaleDateString()}</div>
-                            </div>
-                            <button
-                                className="session-delete-btn"
-                                onClick={(e) => deleteSession(e, session.id)}
-                                title="Delete chat"
-                                aria-label="Delete chat"
+                            🗑 Delete All Chats
+                        </button>
+                    )}
+
+                    <div className="sidebar-section-title">Daily Wisdom</div>
+                    <div className="sidebar-menu">
+                        <button 
+                            className={`sidebar-menu-btn ${activeTab === 'chat' ? 'active' : ''}`}
+                            onClick={() => { setActiveTab('chat'); setIsSidebarOpen(false); }}
+                        >
+                            <span>💬</span> Spiritual Guidance
+                        </button>
+                        <button 
+                            className={`sidebar-menu-btn ${activeTab === 'quiz' ? 'active' : ''}`}
+                            onClick={() => { setActiveTab('quiz'); setIsSidebarOpen(false); }}
+                        >
+                            <span>📝</span> Daily Quiz & Prompt
+                        </button>
+                    </div>
+
+                    <div className="sidebar-section-title">Scripture Course</div>
+                    <div className="sidebar-menu">
+                        <button 
+                            className={`sidebar-menu-btn ${activeTab === 'study' && selectedStudyScripture === 'bg' ? 'active' : ''}`}
+                            onClick={() => { setActiveTab('study'); setSelectedStudyScripture('bg'); setIsSidebarOpen(false); }}
+                        >
+                            <span>📖</span> Bhagavad Gita
+                        </button>
+                        <button 
+                            className={`sidebar-menu-btn ${activeTab === 'study' && selectedStudyScripture === 'uddhava' ? 'active' : ''}`}
+                            onClick={() => { setActiveTab('study'); setSelectedStudyScripture('uddhava'); setIsSidebarOpen(false); }}
+                        >
+                            <span>🌺</span> Uddhava Gita
+                        </button>
+                        <button 
+                            className={`sidebar-menu-btn ${activeTab === 'study' && selectedStudyScripture === 'bhagavatam' ? 'active' : ''}`}
+                            onClick={() => { setActiveTab('study'); setSelectedStudyScripture('bhagavatam'); setIsSidebarOpen(false); }}
+                        >
+                            <span>🪷</span> Śrīmad Bhāgavatam
+                        </button>
+                    </div>
+
+                    <div className="sidebar-section-title">Chat History</div>
+
+                    <div className="session-list">
+                        {sessions.map(session => (
+                            <div
+                                key={session.id}
+                                className={`session-item ${currentSessionId === session.id ? 'active' : ''}`}
+                                onClick={() => selectSession(session.id)}
                             >
-                                🗑
-                            </button>
-                        </div>
-                    ))}
+                                <div className="session-item-content">
+                                    <div className="session-title">{session.title}</div>
+                                    <div className="session-date">{new Date(session.timestamp).toLocaleDateString()}</div>
+                                </div>
+                                <button
+                                    className="session-delete-btn"
+                                    onClick={(e) => deleteSession(e, session.id)}
+                                    title="Delete chat"
+                                    aria-label="Delete chat"
+                                >
+                                    🗑
+                                </button>
+                            </div>
+                        ))}
+                    </div>
                 </div>
 
                 {/* Sidebar Footer: Account info + actions (ChatGPT-style) */}

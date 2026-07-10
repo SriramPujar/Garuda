@@ -49,18 +49,62 @@ const CANTO_DATA: Record<number, any[]> = {
     12: canto12
 };
 
-// Retrieve a Srimad Bhagavatam verse by Canto and sequential verse index
-function getBhagavatamVerse(canto: number, verseIndex: number) {
+// Retrieve a Srimad Bhagavatam verse by Canto, Chapter, and Verse
+function getBhagavatamVerse(canto: number, chapter: number, verse: number) {
     const rows = CANTO_DATA[canto];
     if (!rows || rows.length === 0) return null;
     
-    // Ensure index is within range
-    const safeIndex = Math.min(rows.length, Math.max(1, verseIndex));
-    const match = rows[safeIndex - 1];
+    // 1. Direct try
+    const directMatch = rows.find((r: any) => r.chapter === chapter && r.verse === verse);
+    if (directMatch) {
+        return {
+            match: directMatch,
+            actualCanto: canto,
+            actualChapter: chapter,
+            actualVerse: verse
+        };
+    }
+
+    // 2. Next verse check (in case they went past the last verse of a chapter)
+    if (verse > 1) {
+        const nextChapterMatch = rows.find((r: any) => r.chapter === chapter + 1 && r.verse === 1);
+        if (nextChapterMatch) {
+            return {
+                match: nextChapterMatch,
+                actualCanto: canto,
+                actualChapter: chapter + 1,
+                actualVerse: 1
+            };
+        }
+        
+        // 3. Next canto check (if they went past the last verse of the last chapter of the canto)
+        const nextCantoRows = CANTO_DATA[canto + 1];
+        if (nextCantoRows && nextCantoRows.length > 0) {
+            return {
+                match: nextCantoRows[0],
+                actualCanto: canto + 1,
+                actualChapter: nextCantoRows[0].chapter,
+                actualVerse: nextCantoRows[0].verse
+            };
+        }
+    }
+
+    // Fallback: return the first verse of that chapter or Canto
+    const chRows = rows.filter((r: any) => r.chapter === chapter);
+    if (chRows.length > 0) {
+        return {
+            match: chRows[0],
+            actualCanto: canto,
+            actualChapter: chapter,
+            actualVerse: chRows[0].verse
+        };
+    }
     
     return {
-        match,
-        actualVerse: safeIndex
+        match: rows[0],
+        actualCanto: canto,
+        actualChapter: rows[0].chapter,
+        actualVerse: rows[0].verse
     };
 }
 
@@ -269,11 +313,12 @@ export async function OPTIONS() {
 
 export async function POST(req: Request) {
     try {
-        const { scripture, chapter, verse } = await req.json();
+        const { scripture, chapter, verse, canto, subChapter } = await req.json();
         
         let loadedSanskrit = '';
         let loadedTranslation = '';
         let citation = '';
+        let actualCanto = canto || chapter || 1;
         let actualChapter = chapter;
         let actualVerse = verse;
 
@@ -309,29 +354,54 @@ export async function POST(req: Request) {
             }
         } else if (scripture === 'bhagavatam') {
             // ── SHRIMAD BHAGAVATAM ──
-            const res = getBhagavatamVerse(chapter, verse); // In Bhagavatam, Canto is passed in the "chapter" param
+            const targetCanto = canto || chapter || 1;
+            const targetChapter = subChapter || 1;
+            const targetVerse = verse || 1;
+            
+            // If subChapter is not defined, treat it as the old sequential lookup
+            const hasSubChapter = typeof subChapter !== 'undefined' && subChapter !== null;
+            
+            let res;
+            if (hasSubChapter) {
+                res = getBhagavatamVerse(targetCanto, targetChapter, targetVerse);
+            } else {
+                // Sequential fallback: find row at index (targetVerse - 1)
+                const rows = CANTO_DATA[targetCanto];
+                if (rows && rows.length > 0) {
+                    const safeIdx = Math.min(rows.length, Math.max(1, targetVerse)) - 1;
+                    const match = rows[safeIdx];
+                    res = {
+                        match,
+                        actualCanto: targetCanto,
+                        actualChapter: match.chapter,
+                        actualVerse: match.verse
+                    };
+                }
+            }
             
             if (res) {
                 loadedSanskrit = `${res.match.sanskrit}\n\n[Transliteration]\n${res.match.transliteration}`;
                 loadedTranslation = res.match.translation || `Direct study verse from the Bhagavatam Purana. (Transliteration: ${res.match.transliteration})`;
-                actualChapter = chapter;
+                actualCanto = res.actualCanto;
+                actualChapter = res.actualChapter;
                 actualVerse = res.actualVerse;
-                citation = `Srimad Bhagavatam Canto ${chapter}, Chapter ${res.match.chapter}, Verse ${res.match.verse}`;
+                citation = `Srimad Bhagavatam Canto ${res.actualCanto}, Chapter ${res.actualChapter}, Verse ${res.actualVerse}`;
             } else {
-                loadedSanskrit = `|| Srimad Bhagavatam Canto ${chapter}, Verse ${verse} ||`;
-                loadedTranslation = `Study passage for Srimad Bhagavatam Canto ${chapter}.`;
-                citation = `Srimad Bhagavatam Canto ${chapter}, Verse ${verse}`;
+                loadedSanskrit = `|| Srimad Bhagavatam Canto ${targetCanto}, Verse ${targetVerse} ||`;
+                loadedTranslation = `Study passage for Srimad Bhagavatam Canto ${targetCanto}.`;
+                citation = `Srimad Bhagavatam Canto ${targetCanto}, Verse ${targetVerse}`;
             }
         }
 
         // Generate summary dynamically based on retrieved Sanskrit & translation
         const summary = await generateSummary(citation, loadedSanskrit, loadedTranslation);
 
-        const responseData: ScriptureResponse = {
+        const responseData = {
             sanskrit: loadedSanskrit,
             translation: loadedTranslation,
             summary,
             citation,
+            actualCanto,
             actualChapter,
             actualVerse
         };
