@@ -458,7 +458,7 @@ export default function Chat() {
     }
 
     return (
-        <div className={styles.container}>
+        <div className={`app-layout ${isSidebarOpen ? 'sidebar-open' : 'sidebar-closed'}`}>
             {/* Sidebar Toggle (Mobile) */}
             <button className="sidebar-toggle" onClick={toggleSidebar}>
                 <span style={{ fontSize: '1.2rem' }}>{isSidebarOpen ? '✕' : '☰'}</span>
@@ -468,7 +468,7 @@ export default function Chat() {
             <div className={`sidebar-overlay ${isSidebarOpen ? 'open' : ''}`} onClick={() => setIsSidebarOpen(false)} />
 
             {/* Sidebar */}
-            <div className={`sidebar ${isSidebarOpen ? 'open' : ''}`}>
+            <div className={`sidebar ${isSidebarOpen ? 'open' : 'closed'}`}>
                 <div className="sidebar-body">
                     <button className="new-chat-btn" onClick={startNewChat}>
                         <span>+</span> New Chat
@@ -585,8 +585,10 @@ export default function Chat() {
                 </div>
             </div>
 
-            {/* Main Content */}
-            <header className={styles.header}>
+            {/* Main Workspace */}
+            <div className="main-workspace">
+                {/* Main Content */}
+                <header className={styles.header}>
                 <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', width: '100%' }}>
                     {/* Space for sidebar toggle on mobile */}
                     <div style={{ width: '40px', display: 'block' }} className="mobile-spacer"></div>
@@ -871,6 +873,7 @@ export default function Chat() {
                 onConfirm={confirmModal.onConfirm}
                 onCancel={() => setConfirmModal(prev => ({ ...prev, isOpen: false }))}
             />
+            </div> {/* Closing main-workspace */}
         </div>
     );
 }
