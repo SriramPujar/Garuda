@@ -3,6 +3,21 @@ import { generateText } from 'ai';
 import fs from 'fs';
 import path from 'path';
 
+// Static imports of Canto JSON datasets to force Next.js compilation bundling
+import canto1 from '@/data/bhagavatam/canto_1.json';
+import canto2 from '@/data/bhagavatam/canto_2.json';
+import canto3 from '@/data/bhagavatam/canto_3.json';
+import canto4 from '@/data/bhagavatam/canto_4.json';
+import canto5 from '@/data/bhagavatam/canto_5.json';
+import canto6 from '@/data/bhagavatam/canto_6.json';
+import canto7 from '@/data/bhagavatam/canto_7.json';
+import canto8 from '@/data/bhagavatam/canto_8.json';
+import canto9 from '@/data/bhagavatam/canto_9.json';
+import canto10 from '@/data/bhagavatam/canto_10.json';
+import canto11 from '@/data/bhagavatam/canto_11.json';
+import canto12 from '@/data/bhagavatam/canto_12.json';
+import canto13 from '@/data/bhagavatam/canto_13.json';
+
 export const maxDuration = 30;
 
 interface ScriptureResponse {
@@ -20,30 +35,35 @@ const CORS_HEADERS = {
     'Access-Control-Allow-Headers': 'Content-Type, Authorization, X-Requested-With',
 };
 
+const CANTO_DATA: Record<number, any[]> = {
+    1: canto1,
+    2: canto2,
+    3: canto3,
+    4: canto4,
+    5: canto5,
+    6: canto6,
+    7: canto7,
+    8: canto8,
+    9: canto9,
+    10: canto10,
+    11: canto11,
+    12: canto12,
+    13: canto13
+};
+
 // Retrieve a Srimad Bhagavatam verse by Canto and sequential verse index
 function getBhagavatamVerse(canto: number, verseIndex: number) {
-    const jsonPath = path.join(process.cwd(), 'data', 'bhagavatam', `canto_${canto}.json`);
-    if (!fs.existsSync(jsonPath)) {
-        console.error("Bhagavatam Canto JSON not found at:", jsonPath);
-        return null;
-    }
-
-    try {
-        const rows = JSON.parse(fs.readFileSync(jsonPath, 'utf8'));
-        if (rows.length === 0) return null;
-        
-        // Ensure index is within range
-        const safeIndex = Math.min(rows.length, Math.max(1, verseIndex));
-        const match = rows[safeIndex - 1];
-        
-        return {
-            match,
-            actualVerse: safeIndex
-        };
-    } catch (e) {
-        console.error(`Failed to read/parse Bhagavatam Canto ${canto}:`, e);
-        return null;
-    }
+    const rows = CANTO_DATA[canto];
+    if (!rows || rows.length === 0) return null;
+    
+    // Ensure index is within range
+    const safeIndex = Math.min(rows.length, Math.max(1, verseIndex));
+    const match = rows[safeIndex - 1];
+    
+    return {
+        match,
+        actualVerse: safeIndex
+    };
 }
 
 // Retrieve an Uddhava Gita verse by Chapter and Verse
@@ -51,38 +71,29 @@ function getUddhavaVerse(chapter: number, verse: number) {
     const targetCanto = 11;
     const targetChapter = chapter + 5; // Uddhava Gita Chapter 1 = Canto 11, Chapter 6
 
-    const jsonPath = path.join(process.cwd(), 'data', 'bhagavatam', `canto_${targetCanto}.json`);
-    if (!fs.existsSync(jsonPath)) {
-        console.error("Uddhava Canto 11 JSON not found at:", jsonPath);
-        return null;
+    const rows = CANTO_DATA[targetCanto];
+    if (!rows || rows.length === 0) return null;
+    
+    // 1. Direct try
+    const directMatch = rows.find((r: any) => r.chapter === targetChapter && r.verse === verse);
+    if (directMatch) {
+        return {
+            match: directMatch,
+            actualChapter: chapter,
+            actualVerse: verse
+        };
     }
 
-    try {
-        const rows = JSON.parse(fs.readFileSync(jsonPath, 'utf8'));
-        
-        // 1. Direct try
-        const directMatch = rows.find((r: any) => r.chapter === targetChapter && r.verse === verse);
-        if (directMatch) {
+    // 2. boundary cross check
+    if (verse > 1) {
+        const nextChapterMatch = rows.find((r: any) => r.chapter === targetChapter + 1 && r.verse === 1);
+        if (nextChapterMatch) {
             return {
-                match: directMatch,
-                actualChapter: chapter,
-                actualVerse: verse
+                match: nextChapterMatch,
+                actualChapter: chapter + 1,
+                actualVerse: 1
             };
         }
-
-        // 2. boundary cross check
-        if (verse > 1) {
-            const nextChapterMatch = rows.find((r: any) => r.chapter === targetChapter + 1 && r.verse === 1);
-            if (nextChapterMatch) {
-                return {
-                    match: nextChapterMatch,
-                    actualChapter: chapter + 1,
-                    actualVerse: 1
-                };
-            }
-        }
-    } catch (e) {
-        console.error("Failed to read/parse Uddhava verse from Canto 11:", e);
     }
 
     return null;
