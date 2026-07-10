@@ -3,43 +3,11 @@ import { generateText } from 'ai';
 
 export const maxDuration = 30;
 
-const groq = createGroq({
-    apiKey: process.env.GROQ_API_KEY || '',
-});
-
 interface ScriptureResponse {
     sanskrit: string;
     translation: string;
     summary: string;
 }
-
-const FALLBACK_VERSES: Record<string, ScriptureResponse> = {
-    'bg_1_1': {
-        sanskrit: "धृतराष्ट्र उवाच |\nधर्मक्षेत्रे कुरुक्षेत्रे समवेता युयुत्सवः |\nमामकाः पाण्डवाश्चैव किमकुर्वत सञ्जय || 1.1 ||",
-        translation: "Dhritarashtra said: O Sanjaya, after assembling in the place of pilgrimage at Kurukshetra, desiring to fight, what did my sons and the sons of Pandu do?",
-        summary: "This opening verse sets the scene of the Bhagavad Gita on the holy field of Kurukshetra, reflecting the inner battlefield of the human heart."
-    },
-    'bg_2_47': {
-        sanskrit: "कर्मण्येवाधिकारस्ते मा फलेषु कदाचन |\nमा कर्मफलहेतुर्भूर्मा ते सङ्गोऽस्त्वकर्मणि || 2.47 ||",
-        translation: "You have a right to perform your prescribed duties, but you are not entitled to the fruits of your actions. Never consider yourself to be the cause of the results of your activities, and never be attached to not doing your duty.",
-        summary: "Lord Krishna establishes the foundational philosophy of Karma Yoga: perform your actions with devotion, detached from selfish motives."
-    },
-    'bg_18_66': {
-        sanskrit: "सर्वधर्मान्परित्यज्य मामेकं शरणं व्रज |\nअहं त्वां सर्वपापेभ्यो मोक्षयिष्यामी मा शुचः || 18.66 ||",
-        translation: "Abandon all varieties of religion and just surrender unto Me. I shall deliver you from all sinful reactions. Do not fear.",
-        summary: "Krishna's final instructions on absolute surrender (Saranagati), offering complete liberation and freedom from anxieties."
-    },
-    'uddhava_1_1': {
-        sanskrit: "Uddhava Gita - Chapter 1, Verse 1",
-        translation: "Uddhava requested: O Krishna, please describe how a seeker can cultivate spiritual detachment while residing in this temporary material world.",
-        summary: "Uddhava initiates the dialogue by questioning the Lord about spiritual ascension amidst material distractions."
-    },
-    'bhagavatam_1_1': {
-        sanskrit: "जन्माद्यस्य यतोऽन्वयादितरतश्चार्थेष्वभिज्ञः स्वराट् |\nतेने ब्रह्म हृदा य आदिकवये मुह्यन्ति यत्सूरयः || 1.1.1 ||",
-        translation: "O my Lord, Sri Krishna, son of Vasudeva, O all-pervading Personality of Godhead, I offer my respectful obeisances unto You. I meditate upon Lord Sri Krishna because He is the Absolute Truth...",
-        summary: "The opening invocation of Shrimad Bhagavatam establishes Krishna as the supreme source of creation, maintenance, and ultimate truth."
-    }
-};
 
 const CORS_HEADERS = {
     'Access-Control-Allow-Origin': '*',
@@ -47,32 +15,92 @@ const CORS_HEADERS = {
     'Access-Control-Allow-Headers': 'Content-Type, Authorization, X-Requested-With',
 };
 
+// Robust JSON parse helper
+function cleanAndParseJSON(text: string): ScriptureResponse {
+    let cleaned = text.trim();
+    
+    // Extract JSON block between first '{' and last '}'
+    const firstBrace = cleaned.indexOf('{');
+    const lastBrace = cleaned.lastIndexOf('}');
+    if (firstBrace !== -1 && lastBrace !== -1 && lastBrace > firstBrace) {
+        cleaned = cleaned.substring(firstBrace, lastBrace + 1);
+    }
+    
+    try {
+        return JSON.parse(cleaned);
+    } catch (e: any) {
+        // Try fixing common trailing comma errors or key quote mismatches
+        try {
+            const fixed = cleaned
+                .replace(/,\s*([\]}])/g, '$1')
+                .replace(/(['"])?([a-zA-Z0-9_]+)(['"])?\s*:/g, '"$2":');
+            return JSON.parse(fixed);
+        } catch (err2: any) {
+            throw new Error(`Failed to parse LLM JSON: ${e.message}`);
+        }
+    }
+}
+
+// Ollama fallback query helper
+async function queryOllama(activeScriptName: string, chapter: number, verse: number, systemPrompt: string): Promise<ScriptureResponse> {
+    const url = process.env.OLLAMA_BASE_URL || 'http://localhost:11434/api/chat';
+    const response = await fetch(url, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+            model: process.env.OLLAMA_MODEL || 'llama3',
+            messages: [
+                { role: 'system', content: systemPrompt },
+                { role: 'user', content: `Please retrieve ${activeScriptName} Chapter ${chapter}, Verse ${verse} matching instructions.` }
+            ],
+            stream: false
+        })
+    });
+
+    if (!response.ok) {
+        throw new Error(`Ollama response error: ${response.status}`);
+    }
+
+    const data = await response.json();
+    const content = data.message?.content || '';
+    return cleanAndParseJSON(content);
+}
+
 export async function OPTIONS() {
     return new Response(null, { status: 204, headers: CORS_HEADERS });
 }
 
 export async function POST(req: Request) {
+    let reqScripture = 'bg';
+    let reqChapter = 1;
+    let reqVerse = 1;
+
     try {
-        const { scripture, chapter, verse } = await req.json();
-        const scriptKey = `${scripture}_${chapter}_${verse}`;
-        
-        // Select fallback if we have one pre-defined, or default to bg_2_47
-        const defaultFallback = FALLBACK_VERSES[scriptKey] || FALLBACK_VERSES['bg_2_47'];
+        const body = await req.json();
+        reqScripture = body.scripture || 'bg';
+        reqChapter = body.chapter || 1;
+        reqVerse = body.verse || 1;
+    } catch (err) {
+        console.error("Failed to parse body params:", err);
+    }
 
-        if (!process.env.GROQ_API_KEY) {
-            return Response.json(defaultFallback, { headers: CORS_HEADERS });
-        }
+    const scriptureNames: Record<string, string> = {
+        bg: 'Bhagavad Gita',
+        uddhava: 'Uddhava Gita',
+        bhagavatam: 'Shrimad Bhagavatam'
+    };
+    const activeScriptName = scriptureNames[reqScripture] || 'Bhagavad Gita';
+    const unitsName = reqScripture === 'bhagavatam' ? 'Canto' : 'Chapter';
 
-        const scriptureNames: Record<string, string> = {
-            bg: 'Bhagavad Gita',
-            uddhava: 'Uddhava Gita',
-            bhagavatam: 'Shrimad Bhagavatam'
-        };
+    // 1. Establish the dynamic fallback to display the correct book/chapter/verse even if AI is unavailable
+    const dynamicFallback: ScriptureResponse = {
+        sanskrit: `|| ${activeScriptName} ${unitsName} ${reqChapter}, Verse ${reqVerse} ||`,
+        translation: `Direct translation and meaning for ${activeScriptName} ${unitsName} ${reqChapter}, Verse ${reqVerse} is loading. Please configure the GROQ_API_KEY in your server configuration settings or verify your network connection to stream full Sanskrit details.`,
+        summary: `Self-realization passage in ${activeScriptName} ${unitsName} ${reqChapter}.`
+    };
 
-        const activeScriptName = scriptureNames[scripture] || 'Bhagavad Gita';
-
-        const systemPrompt = `You are Garuda — a wise scriptural lookup system.
-The user wants to read: "${activeScriptName}" Chapter ${chapter}, Verse ${verse} (or Canto ${chapter}, Chapter ${verse} if Shrimad Bhagavatam).
+    const systemPrompt = `You are Garuda — a wise scriptural lookup system.
+The user wants to read: "${activeScriptName}" Chapter ${reqChapter}, Verse ${reqVerse} (or Canto ${reqChapter}, Chapter ${reqVerse} if Shrimad Bhagavatam).
 Please retrieve the correct Sanskrit text, direct English translation, and a brief 1-2 sentence core message summary for this specific verse.
 
 CRITICAL: Return ONLY a raw JSON block. Do not wrap in markdown or backticks.
@@ -84,38 +112,37 @@ Schema:
 }
 `;
 
-        const { text } = await generateText({
-            model: groq('llama-3.3-70b-versatile'),
-            prompt: `Please retrieve ${activeScriptName} Chapter ${chapter}, Verse ${verse} matching instructions.`,
-            system: systemPrompt,
-        });
-
-        // Clean up markdown wrapping
-        let cleaned = text.trim();
-        if (cleaned.startsWith('```json')) {
-            cleaned = cleaned.substring(7);
-        }
-        if (cleaned.startsWith('```')) {
-            cleaned = cleaned.substring(3);
-        }
-        if (cleaned.endsWith('```')) {
-            cleaned = cleaned.substring(0, cleaned.length - 3);
-        }
-        cleaned = cleaned.trim();
-
+    // 2. Try Groq
+    if (process.env.GROQ_API_KEY) {
         try {
-            const parsed = JSON.parse(cleaned);
-            if (parsed.sanskrit && parsed.translation && parsed.summary) {
+            const groq = createGroq({ apiKey: process.env.GROQ_API_KEY });
+            const { text } = await generateText({
+                model: groq('llama-3.3-70b-versatile'),
+                prompt: `Please retrieve ${activeScriptName} Chapter ${reqChapter}, Verse ${reqVerse} matching instructions.`,
+                system: systemPrompt,
+            });
+
+            const parsed = cleanAndParseJSON(text);
+            if (parsed.sanskrit && parsed.translation) {
                 return Response.json(parsed, { headers: CORS_HEADERS });
             }
-        } catch (parseErr) {
-            console.error("Failed to parse JSON scripture output:", cleaned, parseErr);
+        } catch (groqErr) {
+            console.error("Groq Scripture Fetch Error, trying Ollama fallback...", groqErr);
         }
-
-        return Response.json(defaultFallback, { headers: CORS_HEADERS });
-
-    } catch (e: any) {
-        console.error("Scripture API error:", e);
-        return new Response(JSON.stringify({ error: e.message }), { status: 500, headers: CORS_HEADERS });
     }
+
+    // 3. Try Ollama (for local dev fallback)
+    if (process.env.OLLAMA_BASE_URL || process.env.OLLAMA_MODEL) {
+        try {
+            const parsed = await queryOllama(activeScriptName, reqChapter, reqVerse, systemPrompt);
+            if (parsed.sanskrit && parsed.translation) {
+                return Response.json(parsed, { headers: CORS_HEADERS });
+            }
+        } catch (ollamaErr) {
+            console.error("Ollama Scripture Fetch Error, falling back to dynamic template...", ollamaErr);
+        }
+    }
+
+    // 4. Return dynamic fallback so the user always sees the correct book, chapter, and verse they clicked on
+    return Response.json(dynamicFallback, { headers: CORS_HEADERS });
 }
