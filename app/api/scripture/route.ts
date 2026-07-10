@@ -16,7 +16,6 @@ import canto9 from './bhagavatam/canto_9.json';
 import canto10 from './bhagavatam/canto_10.json';
 import canto11 from './bhagavatam/canto_11.json';
 import canto12 from './bhagavatam/canto_12.json';
-import canto13 from './bhagavatam/canto_13.json';
 
 export const maxDuration = 30;
 
@@ -47,8 +46,7 @@ const CANTO_DATA: Record<number, any[]> = {
     9: canto9,
     10: canto10,
     11: canto11,
-    12: canto12,
-    13: canto13
+    12: canto12
 };
 
 // Retrieve a Srimad Bhagavatam verse by Canto and sequential verse index
@@ -299,7 +297,7 @@ export async function POST(req: Request) {
             const res = getUddhavaVerse(chapter, verse);
             if (res) {
                 loadedSanskrit = `${res.match.sanskrit}\n\n[Transliteration]\n${res.match.transliteration}`;
-                loadedTranslation = `Direct study verse from the Purana. (Transliteration: ${res.match.transliteration})`;
+                loadedTranslation = res.match.translation || `Direct study verse from the Purana. (Transliteration: ${res.match.transliteration})`;
                 actualChapter = res.actualChapter;
                 actualVerse = res.actualVerse;
                 citation = `Uddhava Gita Chapter ${actualChapter}, Verse ${actualVerse} (Srimad Bhagavatam 11.${res.match.chapter}.${res.match.verse})`;
@@ -315,7 +313,7 @@ export async function POST(req: Request) {
             
             if (res) {
                 loadedSanskrit = `${res.match.sanskrit}\n\n[Transliteration]\n${res.match.transliteration}`;
-                loadedTranslation = `Direct study verse from the Bhagavatam Purana. (Transliteration: ${res.match.transliteration})`;
+                loadedTranslation = res.match.translation || `Direct study verse from the Bhagavatam Purana. (Transliteration: ${res.match.transliteration})`;
                 actualChapter = chapter;
                 actualVerse = res.actualVerse;
                 citation = `Srimad Bhagavatam Canto ${chapter}, Chapter ${res.match.chapter}, Verse ${res.match.verse}`;
