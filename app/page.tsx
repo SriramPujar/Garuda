@@ -8,6 +8,7 @@ import ConfirmModal from './components/ConfirmModal';
 import MoodGuidance from './components/MoodGuidance';
 import VedicQuiz from './components/VedicQuiz';
 import ScriptureStudy from './components/ScriptureStudy';
+import LibraryNotes from './components/LibraryNotes';
 import { Capacitor } from '@capacitor/core';
 
 // Map raw PDF filenames → beautiful display names
@@ -72,8 +73,9 @@ export default function Chat() {
     const [isSidebarOpen, setIsSidebarOpen] = useState(false);
     const [activeFilter, setActiveFilter] = useState('all');
     const [tone, setTone] = useState<'beginner' | 'traditional' | 'modern'>('traditional');
-    const [activeTab, setActiveTab] = useState<'chat' | 'quiz' | 'study'>('chat');
+    const [activeTab, setActiveTab] = useState<'chat' | 'quiz' | 'study' | 'library'>('chat');
     const [selectedStudyScripture, setSelectedStudyScripture] = useState<'bg' | 'uddhava' | 'bhagavatam'>('bg');
+    const [selectedNoteIdForLibrary, setSelectedNoteIdForLibrary] = useState<string | null>(null);
 
     // Generative AI content reporting states (Policy 11.16)
     const [reportingMessage, setReportingMessage] = useState<{ id: string; content: string } | null>(null);
@@ -427,6 +429,27 @@ export default function Chat() {
         sendCustomPrompt(prompt);
     };
 
+    const handleSaveToNotes = (content: string, title: string, citation?: string, verseText?: string) => {
+        const cleanContent = content.replace(/<[^>]*>/g, '').replace(/&nbsp;/g, ' ').trim();
+        const storedNotes = localStorage.getItem('garuda_library_notes');
+        const notesList = storedNotes ? JSON.parse(storedNotes) : [];
+        const newNote = {
+            id: Math.random().toString(36).substring(2, 9),
+            folderId: citation ? 'favorites' : 'unassigned',
+            title: title || 'Saved Wisdom',
+            content: cleanContent,
+            verseCitation: citation,
+            verseText: verseText,
+            createdAt: Date.now(),
+            updatedAt: Date.now()
+        };
+        const updatedNotes = [newNote, ...notesList];
+        localStorage.setItem('garuda_library_notes', JSON.stringify(updatedNotes));
+        setSelectedNoteIdForLibrary(newNote.id);
+        setActiveTab('library');
+        alert("Saved to notes and opened in Library! 🕉️");
+    };
+
     if (status === 'loading') {
         return <div style={{ height: '100vh', display: 'flex', alignItems: 'center', justifyContent: 'center', background: 'var(--bg-primary)', color: 'var(--color-saffron-500)' }}><h3 style={{fontFamily: 'var(--font-serif)'}}>Communing...</h3></div>;
     }
@@ -494,6 +517,16 @@ export default function Chat() {
                             onClick={() => { setActiveTab('study'); setSelectedStudyScripture('bhagavatam'); setIsSidebarOpen(false); }}
                         >
                             <span>🪷</span> Śrīmad Bhāgavatam
+                        </button>
+                    </div>
+
+                    <div className="sidebar-section-title">My Library</div>
+                    <div className="sidebar-menu">
+                        <button 
+                            className={`sidebar-menu-btn ${activeTab === 'library' ? 'active' : ''}`}
+                            onClick={() => { setActiveTab('library'); setIsSidebarOpen(false); }}
+                        >
+                            <span>📚</span> Sacred Library & Notes
                         </button>
                     </div>
 
@@ -577,7 +610,18 @@ export default function Chat() {
                 </div>
             ) : activeTab === 'study' ? (
                 <div style={{ flexGrow: 1, overflowY: 'auto' }}>
-                    <ScriptureStudy scriptureId={selectedStudyScripture} onAskGaruda={handleStudyDiscuss} />
+                    <ScriptureStudy 
+                        scriptureId={selectedStudyScripture} 
+                        onAskGaruda={handleStudyDiscuss} 
+                        onSaveToNotes={handleSaveToNotes}
+                    />
+                </div>
+            ) : activeTab === 'library' ? (
+                <div style={{ flexGrow: 1, overflowY: 'auto' }}>
+                    <LibraryNotes 
+                        initialSelectedNoteId={selectedNoteIdForLibrary}
+                        onClearInitialNoteId={() => setSelectedNoteIdForLibrary(null)}
+                    />
                 </div>
             ) : (
                 <>
@@ -621,6 +665,15 @@ export default function Chat() {
                                                 }}
                                             >
                                                 🔊 Listen
+                                            </button>
+                                            <button
+                                                onClick={() => handleSaveToNotes(m.content, `Reflections on: ${m.content.replace(/<[^>]*>/g, '').slice(0, 30)}...`, "Garuda Chat Response")}
+                                                style={{
+                                                    background: 'transparent', border: 'none', color: 'var(--color-text-secondary)',
+                                                    fontSize: '0.8rem', cursor: 'pointer', opacity: 0.7
+                                                }}
+                                            >
+                                                📝 Take Note
                                             </button>
                                             <button
                                                 onClick={() => handleReportClick(m.id, m.content)}

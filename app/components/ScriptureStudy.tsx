@@ -28,6 +28,7 @@ const SCRIPTURE_METADATA = {
 interface ScriptureStudyProps {
     scriptureId: 'bg' | 'uddhava' | 'bhagavatam';
     onAskGaruda: (verseText: string, citation: string) => void;
+    onSaveToNotes?: (content: string, title: string, citation?: string, verseText?: string) => void;
 }
 
 interface VerseData {
@@ -37,7 +38,7 @@ interface VerseData {
     citation: string;
 }
 
-export default function ScriptureStudy({ scriptureId, onAskGaruda }: ScriptureStudyProps) {
+export default function ScriptureStudy({ scriptureId, onAskGaruda, onSaveToNotes }: ScriptureStudyProps) {
     const meta = SCRIPTURE_METADATA[scriptureId];
 
     const [studyState, setStudyState] = useState<'setup' | 'reading'>('setup');
@@ -368,8 +369,31 @@ export default function ScriptureStudy({ scriptureId, onAskGaruda }: ScriptureSt
                                 )}
                                 disabled={!verseData}
                             >
-                                🕉️ Ask Garuda About This Verse
+                                🕉️ Ask Garuda
                             </button>
+
+                            {onSaveToNotes && (
+                                <button 
+                                    className={styles.discussBtn} 
+                                    style={{ background: 'rgba(255,255,255,0.04)', borderColor: 'rgba(255,255,255,0.1)', color: 'var(--color-text-primary)' }}
+                                    onClick={() => {
+                                        if (verseData) {
+                                            const citation = scriptureId === 'bhagavatam' 
+                                                ? `${meta.name} Canto ${chapter}, Chapter ${subChapter}, Verse ${verse}`
+                                                : `${meta.name} ${meta.unitsLabel} ${chapter}, Verse ${verse}`;
+                                            onSaveToNotes(
+                                                `Translation:\n${verseData.translation}\n\nSummary:\n${verseData.summary}`,
+                                                `Study Notes: ${citation}`,
+                                                citation,
+                                                verseData.sanskrit
+                                            );
+                                        }
+                                    }}
+                                    disabled={!verseData}
+                                >
+                                    📝 Save to Library
+                                </button>
+                            )}
 
                             <button 
                                 className={styles.navBtn} 
