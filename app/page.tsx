@@ -740,7 +740,7 @@ export default function Chat() {
                                         setIsToneOpen(false);
                                     }}
                                 >
-                                    🔍 Search: {BOOKS.find(b => b.id === activeFilter)?.label || 'All'} ▾
+                                    <strong>Search:</strong> {BOOKS.find(b => b.id === activeFilter)?.label || 'All'} ▾
                                 </button>
                                 {isSearchOpen && (
                                     <div className={styles.dropdownMenu}>
@@ -754,7 +754,7 @@ export default function Chat() {
                                                     setIsSearchOpen(false);
                                                 }}
                                             >
-                                                {book.icon} {book.label}
+                                                {book.label}
                                             </button>
                                         ))}
                                     </div>
@@ -772,7 +772,7 @@ export default function Chat() {
                                         setIsSearchOpen(false);
                                     }}
                                 >
-                                    🎭 Tone: {TONES.find(t => t.id === tone)?.label || 'Traditional'} ▾
+                                    <strong>Tone:</strong> {TONES.find(t => t.id === tone)?.label || 'Traditional'} ▾
                                 </button>
                                 {isToneOpen && (
                                     <div className={styles.dropdownMenu}>
@@ -786,7 +786,7 @@ export default function Chat() {
                                                     setIsToneOpen(false);
                                                 }}
                                             >
-                                                {t.icon} {t.label}
+                                                {t.label}
                                             </button>
                                         ))}
                                     </div>
