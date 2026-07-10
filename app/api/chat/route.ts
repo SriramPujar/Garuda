@@ -116,6 +116,45 @@ export async function POST(req: Request) {
     const sessionUser = await getServerSession(authOptions);
     const userId = sessionUser?.user?.id;
 
+    // Load seeker's past history context (Memory)
+    let historyContext = '';
+    if (userId) {
+        try {
+            const recentSessions = await prisma.session.findMany({
+                where: { 
+                    userId: userId,
+                    NOT: { id: sessionId }
+                },
+                orderBy: { timestamp: 'desc' },
+                take: 4,
+                include: {
+                    messages: {
+                        orderBy: { createdAt: 'desc' },
+                        take: 4
+                    }
+                }
+            });
+
+            if (recentSessions.length > 0) {
+                historyContext = "\n\n# SEEKER'S PAST CONTEMPLATION HISTORY (MEMORY)\n";
+                historyContext += "You have access to the seeker's past conversations. Pay attention to their past questions, concerns, and overall emotional state (mood). If their new question is related to these past topics, feel free to reference it naturally (e.g., 'Last week you asked about detachment...'; 'Previously you contemplated...'). If the current topic is unrelated, do not force a reference, but maintain a consistent, personalized spiritual relationship with them. Here is their recent history:\n\n";
+                
+                for (const s of recentSessions) {
+                    const chronologicalMsgs = [...s.messages].reverse();
+                    historyContext += `## Session: "${s.title}" (Started: ${s.timestamp.toLocaleDateString()})\n`;
+                    for (const m of chronologicalMsgs) {
+                        const dateStr = m.createdAt.toLocaleDateString();
+                        const roleName = m.role === 'user' ? 'Seeker' : 'Garuda';
+                        historyContext += `[${dateStr}] ${roleName}: "${getMessageContent(m).slice(0, 300)}"\n`;
+                    }
+                    historyContext += "\n";
+                }
+            }
+        } catch (historyErr) {
+            console.error("Failed to load user history context:", historyErr);
+        }
+    }
+
     const filterNames: Record<string, string> = {
         all: '**Bhagavad Gita**, **Uddhava Gita**, and **Shrimad Bhagavatam**',
         bg: '**Bhagavad Gita**',
@@ -258,7 +297,9 @@ Hare Krishna! 🙏
     }
 
 
-    const finalSystemPrompt = systemPrompt + (contextText ? `\n\n# RETRIEVED SCRIPTURAL CONTEXT\nThe following passages from the sacred texts have been retrieved based on the user's query. Use ONLY this information to construct your answer:\n\n${contextText}` : '');
+    const finalSystemPrompt = systemPrompt + 
+        (contextText ? `\n\n# RETRIEVED SCRIPTURAL CONTEXT\nThe following passages from the sacred texts have been retrieved based on the user's query. Use ONLY this information to construct your answer:\n\n${contextText}` : '') +
+        historyContext;
 
     // Insert System Prompt
     const fullMessages = [
