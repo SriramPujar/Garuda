@@ -76,6 +76,8 @@ export default function Chat() {
     const [activeTab, setActiveTab] = useState<'chat' | 'quiz' | 'study' | 'library'>('chat');
     const [selectedStudyScripture, setSelectedStudyScripture] = useState<'bg' | 'uddhava' | 'bhagavatam'>('bg');
     const [selectedNoteIdForLibrary, setSelectedNoteIdForLibrary] = useState<string | null>(null);
+    const [isSearchOpen, setIsSearchOpen] = useState(false);
+    const [isToneOpen, setIsToneOpen] = useState(false);
 
     // Generative AI content reporting states (Policy 11.16)
     const [reportingMessage, setReportingMessage] = useState<{ id: string; content: string } | null>(null);
@@ -104,6 +106,15 @@ export default function Chat() {
     const scrollToBottom = () => {
         messagesEndRef.current?.scrollIntoView({ behavior: 'smooth' });
     };
+
+    useEffect(() => {
+        const handleOutsideClick = () => {
+            setIsSearchOpen(false);
+            setIsToneOpen(false);
+        };
+        window.addEventListener('click', handleOutsideClick);
+        return () => window.removeEventListener('click', handleOutsideClick);
+    }, []);
 
     // Initialize: Theme & PWA setup (runs once)
     useEffect(() => {
@@ -716,33 +727,71 @@ export default function Chat() {
                     </div>
 
                     <div className={styles.inputArea}>
-                        {/* Book Filter Chips */}
-                        <div className={styles.filterBar} style={{ marginBottom: '0.5rem', width: '100%', maxWidth: '800px' }}>
-                            <span className={styles.filterLabel}>Search in:</span>
-                            {BOOKS.map(book => (
-                                <button
-                                    key={book.id}
+                        {/* Dropdown Options Row (Spacious & Clean) */}
+                        <div className={styles.optionsRow}>
+                            {/* Search Dropdown */}
+                            <div className={styles.dropdownContainer}>
+                                <button 
                                     type="button"
-                                    className={`${styles.filterChip} ${activeFilter === book.id ? styles.filterChipActive : ''}`}
-                                    onClick={() => setActiveFilter(book.id)}
+                                    className={`${styles.dropdownTrigger} ${isSearchOpen ? styles.dropdownActive : ''}`}
+                                    onClick={(e) => {
+                                        e.stopPropagation();
+                                        setIsSearchOpen(!isSearchOpen);
+                                        setIsToneOpen(false);
+                                    }}
                                 >
-                                    {book.icon} {book.label}
+                                    🔍 Search: {BOOKS.find(b => b.id === activeFilter)?.label || 'All'} ▾
                                 </button>
-                            ))}
-                        </div>
-                        {/* Tone Selector Chips */}
-                        <div className={styles.filterBar} style={{ marginBottom: '0.75rem', width: '100%', maxWidth: '800px' }}>
-                            <span className={styles.filterLabel}>Garuda Tone:</span>
-                            {TONES.map(t => (
-                                <button
-                                    key={t.id}
+                                {isSearchOpen && (
+                                    <div className={styles.dropdownMenu}>
+                                        {BOOKS.map(book => (
+                                            <button
+                                                key={book.id}
+                                                type="button"
+                                                className={`${styles.dropdownItem} ${activeFilter === book.id ? styles.itemActive : ''}`}
+                                                onClick={() => {
+                                                    setActiveFilter(book.id);
+                                                    setIsSearchOpen(false);
+                                                }}
+                                            >
+                                                {book.icon} {book.label}
+                                            </button>
+                                        ))}
+                                    </div>
+                                )}
+                            </div>
+
+                            {/* Tone Dropdown */}
+                            <div className={styles.dropdownContainer}>
+                                <button 
                                     type="button"
-                                    className={`${styles.filterChip} ${tone === t.id ? styles.filterChipActive : ''}`}
-                                    onClick={() => setTone(t.id as any)}
+                                    className={`${styles.dropdownTrigger} ${isToneOpen ? styles.dropdownActive : ''}`}
+                                    onClick={(e) => {
+                                        e.stopPropagation();
+                                        setIsToneOpen(!isToneOpen);
+                                        setIsSearchOpen(false);
+                                    }}
                                 >
-                                    {t.icon} {t.label}
+                                    🎭 Tone: {TONES.find(t => t.id === tone)?.label || 'Traditional'} ▾
                                 </button>
-                            ))}
+                                {isToneOpen && (
+                                    <div className={styles.dropdownMenu}>
+                                        {TONES.map(t => (
+                                            <button
+                                                key={t.id}
+                                                type="button"
+                                                className={`${styles.dropdownItem} ${tone === t.id ? styles.itemActive : ''}`}
+                                                onClick={() => {
+                                                    setTone(t.id as any);
+                                                    setIsToneOpen(false);
+                                                }}
+                                            >
+                                                {t.icon} {t.label}
+                                            </button>
+                                        ))}
+                                    </div>
+                                )}
+                            </div>
                         </div>
                         <form onSubmit={handleSubmit} className={styles.form}>
                             <input
