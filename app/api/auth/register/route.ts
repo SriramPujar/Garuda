@@ -4,11 +4,11 @@ import bcrypt from "bcryptjs";
 
 export async function POST(req: Request) {
   try {
-    const { username, password } = await req.json();
+    const { username, password, securityQuestion, securityAnswer } = await req.json();
 
-    if (!username || !password) {
+    if (!username || !password || !securityQuestion || !securityAnswer) {
       return NextResponse.json(
-        { message: "Username and password are required" },
+        { message: "Username, password, security question, and answer are required" },
         { status: 400 }
       );
     }
@@ -32,11 +32,14 @@ export async function POST(req: Request) {
     }
 
     const passwordHash = await bcrypt.hash(password, 10);
+    const securityAnswerHash = await bcrypt.hash(securityAnswer.trim().toLowerCase(), 10);
 
     const user = await prisma.user.create({
       data: {
         username,
         passwordHash,
+        securityQuestion,
+        securityAnswer: securityAnswerHash,
       },
     });
 
